@@ -5,6 +5,7 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import Header from '../components/Header';
 import MentorProfile from './MentorProfile';
+import { toast } from 'react-toastify';
 
 const WEEK_LABELS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 const SESI_LABELS = ['1', '2', '3', '4', '5'];
@@ -191,6 +192,44 @@ export default function MentorDashboard({ user }) {
   // Ambil mentorId dari user.id atau user.mentor_id (fallback)
   const mentorId = user?.id !== undefined ? user.id : user?.mentor_id;
   const [mingguKe, setMingguKe] = useState(getCurrentWeekNumber());
+  // Notifikasi pop-up
+  const [shownNotifIds, setShownNotifIds] = useState([]);
+  const [jadwal, setJadwal] = useState([]);
+  const [loadingJadwal, setLoadingJadwal] = useState(false);
+
+  useEffect(() => {
+    if (!mentorId) return;
+    let interval;
+    const fetchNotif = async () => {
+      try {
+        const res = await api.get(`/notifikasi`);
+        // Filter notifikasi untuk mentor ini
+        const notifMentor = res.data.filter(n => n.user_id === mentorId);
+        notifMentor.forEach(n => {
+          if (!shownNotifIds.includes(n.id)) {
+            toast.info(n.pesan);
+            setShownNotifIds(prev => [...prev, n.id]);
+          }
+        });
+      } catch (err) {
+        // silent
+      }
+    };
+    fetchNotif();
+    interval = setInterval(fetchNotif, 10000); // polling tiap 10 detik
+    return () => clearInterval(interval);
+  }, [mentorId, shownNotifIds]);
+
+  useEffect(() => {
+    if (!mentorId) return;
+    setLoadingJadwal(true);
+    api.get(`/mentors/${mentorId}/jadwal`)
+      .then(res => {
+        setJadwal(res.data);
+        setLoadingJadwal(false);
+      })
+      .catch(() => setLoadingJadwal(false));
+  }, [mentorId]);
 
   if (showProfile) {
     return <MentorProfile user={user} onBack={() => setShowProfile(false)} />;
@@ -202,6 +241,42 @@ export default function MentorDashboard({ user }) {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-1 text-green-800">Dashboard Mentor</h1>
           <p className="mb-4 text-gray-600">Atur ketersediaan sesi Anda per minggu di bawah ini.</p>
+        </div>
+        {/* Jadwal Sesi Mengajar */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold mb-2 text-blue-800">Jadwal Mengajar Anda</h2>
+          {loadingJadwal ? (
+            <div>Loading...</div>
+          ) : jadwal.length === 0 ? (
+            <div className="text-gray-500">Belum ada jadwal mengajar yang dijadwalkan admin.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full border mb-4">
+                <thead>
+                  <tr>
+                    <th className="border px-2 py-1">Tanggal</th>
+                    <th className="border px-2 py-1">Kelas</th>
+                    <th className="border px-2 py-1">Sesi</th>
+                    <th className="border px-2 py-1">Jam Mulai</th>
+                    <th className="border px-2 py-1">Jam Selesai</th>
+                    <th className="border px-2 py-1">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {jadwal.map(j => (
+                    <tr key={j.id}>
+                      <td className="border px-2 py-1">{j.tanggal}</td>
+                      <td className="border px-2 py-1">{j.nama_kelas}</td>
+                      <td className="border px-2 py-1">{j.sesi}</td>
+                      <td className="border px-2 py-1">{j.jam_mulai}</td>
+                      <td className="border px-2 py-1">{j.jam_selesai}</td>
+                      <td className="border px-2 py-1">{j.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-4 mb-4">
           <label className="text-gray-600">Minggu ke:</label>

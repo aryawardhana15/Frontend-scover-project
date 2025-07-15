@@ -155,33 +155,15 @@ export default function AdminDashboard({ user }) {
 
   // Fetch mentor yang mampu mapel & available di waktu tsb
   useEffect(() => {
-    if (!selectedMapel || !selectedTanggal || !selectedSesi) {
+    if (!selectedMapel || !selectedTanggal || !selectedSesi || !selectedKelas) {
       setMentorOptions([]);
       return;
     }
-    // 1. Get mentor yang mampu mapel
-    api.get(`/mentor-mata-pelajaran/by-mapel?mapel_id=${selectedMapel}`)
+    api.get(`/mentors/available?mapel_id=${selectedMapel}&tanggal=${selectedTanggal}&sesi=${selectedSesi}&kelas_id=${selectedKelas}`)
       .then(res => {
-        const mentorIds = res.data.map(m => m.mentor_id);
-        // 2. Filter mentor yang available di minggu & hari & sesi tsb
-        const dateObj = new Date(selectedTanggal);
-        const mingguKe = getWeekNumber(dateObj);
-        const hari = dateObj.toLocaleDateString('id-ID', { weekday: 'long' });
-        Promise.all(
-          mentorIds.map(mentorId =>
-            api.get(`/availability-mentor?mentor_id=${mentorId}&minggu_ke=${mingguKe}`)
-              .then(availRes => {
-                const found = availRes.data.find(d => d.hari === hari && d.sesi === selectedSesi && d.is_available);
-                return found ? mentorId : null;
-              })
-              .catch(() => null)
-          )
-        ).then(results => {
-          const filtered = res.data.filter(m => results.includes(m.mentor_id));
-          setMentorOptions(filtered);
-        });
+        setMentorOptions(res.data);
       });
-  }, [selectedMapel, selectedTanggal, selectedSesi]);
+  }, [selectedMapel, selectedTanggal, selectedSesi, selectedKelas]);
 
   const handleApprove = (id) => {
     api.post(`/permintaan-jadwal/approve`, { id })
@@ -268,7 +250,7 @@ export default function AdminDashboard({ user }) {
                 <label className="block mb-1">Mentor</label>
                 <select value={selectedMentor} onChange={e => setSelectedMentor(e.target.value)} className="w-full border rounded p-2" required>
                   <option value="">-- Pilih Mentor --</option>
-                  {mentorOptions.map(m => <option key={m.mentor_id} value={m.mentor_id}>{mentorMap[m.mentor_id] || m.mentor_id}</option>)}
+                  {mentorOptions.map(m => <option key={m.id} value={m.id}>{m.nama}</option>)}
                 </select>
               </div>
               <div className="md:col-span-2 flex gap-2 items-center">
