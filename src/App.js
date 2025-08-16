@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import MentorDashboard from "./pages/MentorDashboard";
+import UserDashboard from "./pages/UserDashboard";
 
 import Toast from "./components/Toast";
 
@@ -17,6 +18,7 @@ function App() {
           {!user && <Route path="/*" element={<Login onLogin={setUser} />} />}
           {user?.role === "admin" && <Route path="/*" element={<AdminDashboard user={user} />} />}
           {user?.role === "mentor" && <Route path="/*" element={<MentorDashboard user={user} />} />}
+          {user?.role === "user" && <Route path="/*" element={<UserDashboard user={user} />} />}
          
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

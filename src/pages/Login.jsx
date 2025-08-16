@@ -22,6 +22,9 @@ export default function Login({ onLogin }) {
       }
       console.log('User login response:', res.data);
       onLogin(res.data);
+      if (res.data.token) {
+        localStorage.setItem('token', res.data.token);
+      }
     } catch (err) {
       setError('Login gagal. Cek email/password.');
     }

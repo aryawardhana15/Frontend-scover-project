@@ -4,6 +4,7 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import PageContainer from '../components/PageContainer';
 import Header from '../components/Header';
+import { getWeekNumber, getWeekRange } from '../utils/dateUtils';
 
 const TABS = [
   { key: 'jadwal', label: 'Jadwal Sesi' },
@@ -16,16 +17,6 @@ const TABS = [
 
 const WEEK_LABELS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 const SESI_LABELS = ['1', '2', '3', '4', '5'];
-
-function getWeekRange(week, year) {
-  const simple = new Date(year, 0, 1 + (week - 1) * 7);
-  const dow = simple.getDay();
-  const weekStart = new Date(simple);
-  weekStart.setDate(simple.getDate() - ((dow + 6) % 7)); // Senin
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-  return [weekStart, weekEnd];
-}
 
 function AvailabilityGrid({ mentorId, mingguKe, setMingguKe }) {
   const [data, setData] = useState([]);
@@ -96,12 +87,6 @@ function AvailabilityGrid({ mentorId, mingguKe, setMingguKe }) {
   );
 }
 
-function getWeekNumber(date) {
-  const start = new Date(date.getFullYear(), 0, 1);
-  const diff = (date - start + (start.getTimezoneOffset() - date.getTimezoneOffset()) * 60000);
-  return Math.floor(diff / (7 * 24 * 60 * 60 * 1000)) + 1;
-}
-
 export default function AdminDashboard({ user }) {
   const [tab, setTab] = useState('jadwal');
   const [jadwal, setJadwal] = useState([]);
@@ -125,6 +110,7 @@ export default function AdminDashboard({ user }) {
   const [assignError, setAssignError] = useState('');
   const [assignSuccess, setAssignSuccess] = useState('');
   const [mingguKe, setMingguKe] = useState(1);
+  const [mentorOptionsLoading, setMentorOptionsLoading] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -157,13 +143,30 @@ export default function AdminDashboard({ user }) {
   useEffect(() => {
     if (!selectedMapel || !selectedTanggal || !selectedSesi || !selectedKelas) {
       setMentorOptions([]);
+      setSelectedMentor(''); // Reset selected mentor
       return;
     }
+    setMentorOptionsLoading(true);
     api.get(`/mentors/available?mapel_id=${selectedMapel}&tanggal=${selectedTanggal}&sesi=${selectedSesi}&kelas_id=${selectedKelas}`)
       .then(res => {
         setMentorOptions(res.data);
-      });
+      })
+      .catch(err => {
+        console.error("Error fetching available mentors:", err);
+        setMentorOptions([]);
+      })
+      .finally(() => setMentorOptionsLoading(false));
   }, [selectedMapel, selectedTanggal, selectedSesi, selectedKelas]);
+
+  // Reset selectedMentor jika mentor yang dipilih tidak ada dalam options yang baru
+  useEffect(() => {
+    if (selectedMentor && mentorOptions.length > 0) {
+      const mentorExists = mentorOptions.some(m => m.id.toString() === selectedMentor.toString());
+      if (!mentorExists) {
+        setSelectedMentor('');
+      }
+    }
+  }, [mentorOptions, selectedMentor]);
 
   const handleApprove = (id) => {
     api.post(`/permintaan-jadwal/approve`, { id })
@@ -248,10 +251,28 @@ export default function AdminDashboard({ user }) {
               </div>
               <div className="md:col-span-2">
                 <label className="block mb-1">Mentor</label>
-                <select value={selectedMentor} onChange={e => setSelectedMentor(e.target.value)} className="w-full border rounded p-2" required>
-                  <option value="">-- Pilih Mentor --</option>
+                <select 
+                  value={selectedMentor} 
+                  onChange={e => setSelectedMentor(e.target.value)} 
+                  className="w-full border rounded p-2" 
+                  required
+                  disabled={mentorOptionsLoading}
+                >
+                  <option value="">
+                    {mentorOptionsLoading 
+                      ? "Loading mentor..." 
+                      : mentorOptions.length === 0 
+                        ? "-- Tidak ada mentor available --" 
+                        : "-- Pilih Mentor --"
+                    }
+                  </option>
                   {mentorOptions.map(m => <option key={m.id} value={m.id}>{m.nama}</option>)}
                 </select>
+                {mentorOptions.length === 0 && !mentorOptionsLoading && selectedMapel && selectedTanggal && selectedSesi && selectedKelas && (
+                  <div className="text-sm text-orange-600 mt-1">
+                    Tidak ada mentor yang available untuk mata pelajaran, tanggal, dan sesi yang dipilih
+                  </div>
+                )}
               </div>
               <div className="md:col-span-2 flex gap-2 items-center">
                 <Button type="submit" variant="success" disabled={assignLoading}>Assign Jadwal</Button>

@@ -6,26 +6,10 @@ import Button from '../components/Button';
 import Header from '../components/Header';
 import MentorProfile from './MentorProfile';
 import { toast } from 'react-toastify';
+import { getCurrentWeekNumber, getWeekRange } from '../utils/dateUtils';
 
 const WEEK_LABELS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 const SESI_LABELS = ['1', '2', '3', '4', '5'];
-
-function getCurrentWeekNumber() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 1);
-  const diff = (now - start + (start.getTimezoneOffset() - now.getTimezoneOffset()) * 60000);
-  return Math.floor(diff / (7 * 24 * 60 * 60 * 1000)) + 1;
-}
-
-function getWeekRange(week, year) {
-  const simple = new Date(year, 0, 1 + (week - 1) * 7);
-  const dow = simple.getDay();
-  const weekStart = new Date(simple);
-  weekStart.setDate(simple.getDate() - ((dow + 6) % 7)); // Senin
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-  return [weekStart, weekEnd];
-}
 
 function AvailabilityGrid({ mentorId, mingguKe, onSuccess }) {
   const [data, setData] = useState([]);
