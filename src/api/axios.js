@@ -1,6 +1,6 @@
 import axios from "axios";
 const api = axios.create({
-  baseURL: "http://localhost:5000/api", // ganti sesuai backend
+  baseURL: "http://localhost:3001/api", // ganti sesuai backend
 });
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
@@ -9,4 +9,4 @@ api.interceptors.request.use(config => {
   }
   return config;
 });
-export default api; 
+export default api;

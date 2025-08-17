@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import PageContainer from '../components/PageContainer';
 import Card from '../components/Card';
 import Button from '../components/Button';
+import PengumumanCarousel from '../components/PengumumanCarousel';
 
 const TABS = [
   { key: 'jadwal', label: 'Jadwal Saya' },
@@ -98,6 +99,7 @@ export default function UserDashboard({ user }) {
     <>
       <Header user={user} onLogout={() => window.location.reload()} />
       <PageContainer>
+      <PengumumanCarousel />
       <h1 className="text-2xl font-bold mb-4">Dashboard Siswa</h1>
         <div className="flex gap-2 mb-6">
           {TABS.map(t => (
@@ -225,4 +227,4 @@ export default function UserDashboard({ user }) {
       </PageContainer>
     </>
   );
-} 
+}
