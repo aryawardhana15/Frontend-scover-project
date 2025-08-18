@@ -11,10 +11,12 @@ import {
   CheckCircleIcon, XCircleIcon, TrashIcon, PlusIcon,
   DocumentTextIcon, PhotoIcon, AcademicCapIcon, ChartBarIcon,
   ClipboardDocumentIcon, PuzzlePieceIcon, LightBulbIcon,
-  BookmarkIcon, ChartPieIcon, TableCellsIcon, ArrowDownTrayIcon
+  BookmarkIcon, ChartPieIcon, TableCellsIcon, ArrowDownTrayIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip } from 'react-tooltip';
+import Chat from '../components/Chat';
 
 const TABS = [
   { key: 'jadwal', label: 'Jadwal Sesi', icon: CalendarIcon, color: 'from-blue-500 to-indigo-600' },
@@ -25,6 +27,7 @@ const TABS = [
   { key: 'notifikasi', label: 'Notifikasi', icon: BellIcon, color: 'from-pink-500 to-rose-600' },
   { key: 'users', label: 'Pengguna', icon: UserGroupIcon, color: 'from-green-500 to-teal-600' },
   { key: 'pengumuman', label: 'Pengumuman', icon: MegaphoneIcon, color: 'from-purple-500 to-pink-600' },
+  { key: 'pesan', label: 'Pesan', icon: ChatBubbleLeftRightIcon, color: 'from-sky-500 to-cyan-600' },
   { key: 'analytics', label: 'Analytics', icon: ChartBarIcon, color: 'from-violet-500 to-fuchsia-600' },
 ];
 
@@ -157,7 +160,7 @@ function AvailabilityGrid({ mentorId, mingguKe, setMingguKe }) {
   );
 }
 
-export default function AdminDashboard({ user }) {
+export default function AdminDashboard({ user, onLogout }) {
   const [tab, setTab] = useState('jadwal');
   const [jadwal, setJadwal] = useState([]);
   const [permintaan, setPermintaan] = useState([]);
@@ -185,15 +188,33 @@ export default function AdminDashboard({ user }) {
   const [pengumumanFile, setPengumumanFile] = useState(null);
   const [currentWeek, setCurrentWeek] = useState(null);
   const [silabus, setSilabus] = useState([]);
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [chatTarget, setChatTarget] = useState(null); // 'users', 'mentors', or null
+  const [chatUsers, setChatUsers] = useState([]);
+  const [chatMentors, setChatMentors] = useState([]);
+  const [selectedChatTarget, setSelectedChatTarget] = useState(null);
+  const [chatListLoading, setChatListLoading] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const [stats, setStats] = useState({
     total_user: 0,
     total_mentor: 0,
     total_kelas: 0,
+    total_sesi_scheduled: 0,
+    total_permintaan_pending: 0,
+    total_mapel: 0,
+  });
+  const [sessionStats, setSessionStats] = useState({
+    total_sessions: 0,
+    completed_sessions: 0,
+    upcoming_sessions: 0,
+    pending_sessions: 0
   });
 
   useEffect(() => {
     api.get('/admin/current-week').then(res => setCurrentWeek(res.data.weekNumber));
     api.get('/admin/stats').then(res => setStats(res.data));
+    api.get('/jadwal-sesi/admin-stats').then(res => setSessionStats(res.data));
   }, []);
 
   useEffect(() => {
@@ -207,9 +228,12 @@ export default function AdminDashboard({ user }) {
       api.get('/users'),
       api.get('/pengumuman'),
       api.get('/silabus'),
-    ]).then(([kelasRes, mentorRes, jadwalRes, permintaanRes, mapelRes, usersRes, pengumumanRes, silabusRes]) => {
+      api.get('/chat/users'),
+      api.get('/history-materi'),
+    ]).then(([kelasRes, mentorRes, jadwalRes, permintaanRes, mapelRes, usersRes, pengumumanRes, silabusRes, chatRes, historyRes]) => {
       setKelas(kelasRes.data);
       setMapel(mapelRes.data);
+      setConversations(historyRes.data); // Use history data for history tab
       setUsers(usersRes.data);
       setPengumuman(pengumumanRes.data);
       setSilabus(silabusRes.data);
@@ -258,6 +282,46 @@ export default function AdminDashboard({ user }) {
       }
     }
   }, [mentorOptions, selectedMentor]);
+
+  useEffect(() => {
+    if (!chatTarget) return;
+
+    setChatListLoading(true);
+    // Use the correct chat endpoints
+    if (chatTarget === 'users') {
+      api.get('/chat/users')
+        .then(res => {
+          setChatUsers(res.data.filter(user => user.role === 'user'));
+        })
+        .catch(err => {
+          console.error('Failed to fetch users:', err);
+          setChatUsers([]);
+        })
+        .finally(() => setChatListLoading(false));
+    } else {
+      api.get('/chat/users')
+        .then(res => {
+          setChatMentors(res.data.filter(user => user.role === 'mentor'));
+        })
+        .catch(err => {
+          console.error('Failed to fetch mentors:', err);
+          setChatMentors([]);
+        })
+        .finally(() => setChatListLoading(false));
+    }
+  }, [chatTarget]);
+
+  const handleSelectChatTarget = (target) => {
+    setSelectedChatTarget(target);
+    // For now, just set the selected target and open chat
+    setSelectedConversation({
+      id: `chat_${target.id}`,
+      targetId: target.id,
+      targetRole: target.type,
+      targetName: target.nama
+    });
+    setChatTarget(null); // Close the user/mentor list
+  };
 
   const handleApprove = (id) => {
     api.post(`/permintaan-jadwal/approve/${id}`)
@@ -364,7 +428,7 @@ export default function AdminDashboard({ user }) {
 
   return (
     <div className="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
-      <Header user={user} onLogout={() => window.location.reload()} />
+      <Header user={user} onLogout={onLogout} />
       
       <PageContainer>
         <div className="mb-8">
@@ -412,6 +476,46 @@ export default function AdminDashboard({ user }) {
                 title="Total Kelas" 
                 value={stats.total_kelas} 
                 color="from-amber-500 to-yellow-600" 
+              />
+            </motion.div>
+            <motion.div variants={fadeIn}>
+              <StatCard 
+                icon={ClockIcon} 
+                title="Sesi Aktif" 
+                value={stats.total_sesi_scheduled} 
+                color="from-violet-500 to-purple-600" 
+              />
+            </motion.div>
+            <motion.div variants={fadeIn}>
+              <StatCard 
+                icon={ArrowPathIcon} 
+                title="Permintaan Baru" 
+                value={stats.total_permintaan_pending} 
+                color="from-pink-500 to-rose-600" 
+              />
+            </motion.div>
+            <motion.div variants={fadeIn}>
+              <StatCard 
+                icon={BookmarkIcon} 
+                title="Total Mapel" 
+                value={stats.total_mapel} 
+                color="from-cyan-500 to-sky-600" 
+              />
+            </motion.div>
+            <motion.div variants={fadeIn}>
+              <StatCard 
+                icon={CheckCircleIcon} 
+                title="Sesi Selesai" 
+                value={sessionStats.completed_sessions} 
+                color="from-emerald-500 to-teal-600" 
+              />
+            </motion.div>
+            <motion.div variants={fadeIn}>
+              <StatCard 
+                icon={ClockIcon} 
+                title="Sesi Mendatang" 
+                value={sessionStats.upcoming_sessions} 
+                color="from-orange-500 to-amber-600" 
               />
             </motion.div>
           </motion.div>
@@ -622,12 +726,13 @@ export default function AdminDashboard({ user }) {
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                      j.status === 'completed' || new Date(j.tanggal) < new Date() ? 'bg-green-100 text-green-800' :
                                       j.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
                                       j.status === 'pending' ? 'bg-amber-100 text-amber-800' :
                                       j.status === 'approved' ? 'bg-green-100 text-green-800' :
                                       'bg-red-100 text-red-800'
                                     }`}>
-                                      {j.status}
+                                      {j.status === 'completed' || new Date(j.tanggal) < new Date() ? 'done' : j.status}
                                     </span>
                                   </td>
                                 </tr>
@@ -864,9 +969,15 @@ export default function AdminDashboard({ user }) {
                                 <tr key={u.id} className="hover:bg-gray-50/50 transition-colors">
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center">
-                                    <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-r from-green-100 to-teal-100 flex items-center justify-center">
-                                      <span className="text-green-600 font-medium">{u.nama ? u.nama.charAt(0) : '?'}</span>
-                                    </div>
+                                      <div className="flex-shrink-0 h-10 w-10">
+                                        {u.foto_profil ? (
+                                          <img className="h-10 w-10 rounded-full object-cover" src={`http://localhost:3001/${u.foto_profil}`} alt={u.nama} />
+                                        ) : (
+                                          <div className="h-10 w-10 rounded-full bg-gradient-to-r from-green-100 to-teal-100 flex items-center justify-center">
+                                            <span className="text-green-600 font-medium">{u.nama ? u.nama.charAt(0) : '?'}</span>
+                                          </div>
+                                        )}
+                                      </div>
                                       <div className="ml-4">
                                         <div className="text-sm font-medium text-gray-900">{u.nama}</div>
                                       </div>
@@ -1020,53 +1131,151 @@ export default function AdminDashboard({ user }) {
                   </Card>
                 )}
 
-                {tab === 'analytics' && (
+                {tab === 'pesan' && (
                   <Card className="shadow-lg rounded-xl overflow-hidden border-0 bg-white/80 backdrop-blur-sm">
-                    <div className="bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-4">
+                    <div className="bg-gradient-to-r from-sky-600 to-cyan-600 px-6 py-4">
                       <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        <ChartBarIcon className="h-6 w-6" />
-                        Analytics Dashboard
+                        <ChatBubbleLeftRightIcon className="h-6 w-6" />
+                        Pesan
                       </h2>
                     </div>
                     <div className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white/80 p-4 rounded-xl shadow-sm border border-gray-200/50">
-                          <h3 className="font-medium text-gray-800 mb-4 flex items-center gap-2">
-                            <ChartPieIcon className="h-5 w-5 text-violet-600" />
-                            Distribusi Sesi per Mata Pelajaran
-                          </h3>
-                          <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-                            <p className="text-gray-500">Chart will be displayed here</p>
-                          </div>
-                        </div>
-                        <div className="bg-white/80 p-4 rounded-xl shadow-sm border border-gray-200/50">
-                          <h3 className="font-medium text-gray-800 mb-4 flex items-center gap-2">
-                            <TableCellsIcon className="h-5 w-5 text-fuchsia-600" />
-                            Aktivitas Terkini
-                          </h3>
-                          <div className="space-y-3">
-                            {[1, 2, 3, 4, 5].map(i => (
-                              <div key={i} className="flex items-center gap-3 p-2 hover:bg-gray-50/50 rounded-lg transition-colors">
-                                <div className="bg-gradient-to-r from-violet-100 to-fuchsia-100 p-2 rounded-full">
-                                  <LightBulbIcon className="h-5 w-5 text-violet-600" />
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium text-gray-800">Aktivitas contoh {i}</p>
-                                  <p className="text-xs text-gray-500">2 jam yang lalu</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                      <div className="flex gap-4 mb-4">
+                        <Button
+                          onClick={() => setShowChat(true)}
+                          variant="primary"
+                          className="bg-blue-500 hover:bg-blue-600"
+                        >
+                          Buka Chat
+                        </Button>
+                      </div>
+                      
+                      <div className="text-center text-gray-500 py-8">
+                        <ChatBubbleLeftRightIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                        <p className="text-lg">Klik tombol "Buka Chat" untuk memulai percakapan dengan user atau mentor</p>
                       </div>
                     </div>
                   </Card>
                 )}
+
+                                 {tab === 'history' && (
+                   <Card className="shadow-lg rounded-xl overflow-hidden border-0 bg-white/80 backdrop-blur-sm">
+                     <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4">
+                       <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                         <ClipboardDocumentIcon className="h-6 w-6" />
+                         History Materi
+                       </h2>
+                     </div>
+                     <div className="p-6">
+                       {loading ? (
+                         <div className="flex justify-center items-center h-64 bg-white/50 rounded-xl backdrop-blur-sm">
+                           <div className="animate-pulse flex flex-col items-center">
+                             <div className="w-12 h-12 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full mb-4 flex items-center justify-center">
+                               <ClipboardDocumentIcon className="h-6 w-6 text-emerald-500" />
+                             </div>
+                             <p className="text-gray-500">Memuat history...</p>
+                           </div>
+                         </div>
+                       ) : conversations.length === 0 ? (
+                         <div className="text-center py-12 bg-white/50 rounded-lg backdrop-blur-sm">
+                           <ClipboardDocumentIcon className="mx-auto h-12 w-12 text-gray-400" />
+                           <h3 className="mt-2 text-lg font-medium text-gray-900">Belum ada history materi</h3>
+                           <p className="mt-1 text-sm text-gray-500">History materi akan muncul setelah mentor mengirim laporan pembelajaran.</p>
+                         </div>
+                       ) : (
+                         <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm bg-white/50 backdrop-blur-sm">
+                           <table className="min-w-full divide-y divide-gray-200">
+                             <thead className="bg-gray-50/50">
+                               <tr>
+                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kelas</th>
+                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mentor</th>
+                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mata Pelajaran</th>
+                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Materi Diajarkan</th>
+                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hasil Pembelajaran</th>
+                               </tr>
+                             </thead>
+                             <tbody className="bg-white/30 divide-y divide-gray-200">
+                               {conversations.map((item, index) => (
+                                 <tr key={index} className="hover:bg-gray-50/50 transition-colors">
+                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                     {item.tanggal}
+                                   </td>
+                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                     {item.nama_kelas || '-'}
+                                   </td>
+                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                     {item.nama_mentor || '-'}
+                                   </td>
+                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                     {item.nama_mapel || '-'}
+                                   </td>
+                                   <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                                     {item.materi_diajarkan || '-'}
+                                   </td>
+                                   <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                                     {item.hasil_belajar || '-'}
+                                   </td>
+                                 </tr>
+                               ))}
+                             </tbody>
+                           </table>
+                         </div>
+                       )}
+                     </div>
+                   </Card>
+                 )}
+                 
+                 {tab === 'analytics' && (
+                   <Card className="shadow-lg rounded-xl overflow-hidden border-0 bg-white/80 backdrop-blur-sm">
+                     <div className="bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-4">
+                       <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                         <ChartBarIcon className="h-6 w-6" />
+                         Analytics Dashboard
+                       </h2>
+                     </div>
+                     <div className="p-6">
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         <div className="bg-white/80 p-4 rounded-xl shadow-sm border border-gray-200/50">
+                           <h3 className="font-medium text-gray-800 mb-4 flex items-center gap-2">
+                             <ChartPieIcon className="h-5 w-5 text-violet-600" />
+                             Distribusi Sesi per Mata Pelajaran
+                           </h3>
+                           <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
+                             <p className="text-gray-500">Chart will be displayed here</p>
+                           </div>
+                         </div>
+                         <div className="bg-white/80 p-4 rounded-xl shadow-sm border border-gray-200/50">
+                           <h3 className="font-medium text-gray-800 mb-4 flex items-center gap-2">
+                             <TableCellsIcon className="h-5 w-5 text-fuchsia-600" />
+                             Aktivitas Terkini
+                           </h3>
+                           <div className="space-y-3">
+                             {[1, 2, 3, 4, 5].map(i => (
+                               <div key={i} className="flex items-center gap-3 p-2 hover:bg-gray-50/50 rounded-lg transition-colors">
+                                 <div className="bg-gradient-to-r from-violet-100 to-fuchsia-100 p-2 rounded-full">
+                                   <LightBulbIcon className="h-5 w-5 text-violet-600" />
+                                 </div>
+                                 <div>
+                                   <p className="text-sm font-medium text-gray-800">Aktivitas contoh {i}</p>
+                                   <p className="text-xs text-gray-500">2 jam yang lalu</p>
+                                 </div>
+                               </div>
+                             ))}
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                   </Card>
+                 )}
               </motion.div>
             </AnimatePresence>
           </div>
         </div>
       </PageContainer>
+
+      {/* Chat Modal */}
+      <Chat isOpen={showChat} onClose={() => setShowChat(false)} />
     </div>
   );
 }

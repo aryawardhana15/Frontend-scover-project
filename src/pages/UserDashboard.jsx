@@ -5,13 +5,16 @@ import PageContainer from '../components/PageContainer';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import PengumumanCarousel from '../components/PengumumanCarousel';
+import Chat from '../components/Chat';
+import { ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/solid';
 
 const TABS = [
   { key: 'jadwal', label: 'Jadwal Saya' },
   { key: 'permintaan', label: 'Minta Jadwal' },
+  { key: 'history', label: 'Riwayat Belajar' },
 ];
 
-export default function UserDashboard({ user }) {
+export default function UserDashboard({ user, onLogout }) {
   const [tab, setTab] = useState('jadwal');
   const [jadwal, setJadwal] = useState([]);
   const [permintaan, setPermintaan] = useState([]);
@@ -29,6 +32,18 @@ export default function UserDashboard({ user }) {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
+  const [showChat, setShowChat] = useState(false);
+  const [conversationId, setConversationId] = useState(null);
+  const [history, setHistory] = useState([]);
+
+  const handleOpenChat = () => {
+    api.post('/chat/conversations')
+      .then(res => {
+        setConversationId(res.data.id);
+        setShowChat(true);
+      })
+      .catch(console.error);
+  };
 
   // Fetch data awal
   useEffect(() => {
@@ -39,9 +54,11 @@ export default function UserDashboard({ user }) {
       api.get('/mata-pelajaran'),
       api.get(`/permintaan-jadwal/user/${user.id}`),
       api.get(`/jadwal-sesi/user/${user.id}`),
-    ]).then(([kelasRes, mentorRes, mapelRes, permintaanRes, jadwalRes]) => {
+      api.get(`/history-materi/user/${user.id}`),
+    ]).then(([kelasRes, mentorRes, mapelRes, permintaanRes, jadwalRes, historyRes]) => {
       setKelas(kelasRes.data);
       setMentors(mentorRes.data);
+      setHistory(historyRes.data);
       setMapel(mapelRes.data);
       setPermintaan(permintaanRes.data);
       setJadwal(jadwalRes.data);
@@ -97,10 +114,34 @@ export default function UserDashboard({ user }) {
 
   return (
     <>
-      <Header user={user} onLogout={() => window.location.reload()} />
+      <Header user={user} onLogout={onLogout} />
       <PageContainer>
-      <PengumumanCarousel />
-      <h1 className="text-2xl font-bold mb-4">Dashboard Siswa</h1>
+        <PengumumanCarousel />
+
+        {/* Floating Chat Button */}
+        <div className="fixed bottom-8 right-8 z-50">
+          <button
+            onClick={handleOpenChat}
+            className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition"
+          >
+            <ChatBubbleOvalLeftEllipsisIcon className="h-8 w-8" />
+          </button>
+        </div>
+
+        {/* Chat Modal */}
+        {showChat && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+              <div className="flex justify-between items-center p-4 border-b">
+                <h2 className="text-lg font-bold">Chat dengan Admin</h2>
+                <button onClick={() => setShowChat(false)} className="text-gray-500 hover:text-gray-800">&times;</button>
+              </div>
+              <Chat conversationId={conversationId} user={user} />
+            </div>
+          </div>
+        )}
+
+        <h1 className="text-2xl font-bold mb-4">Dashboard Siswa</h1>
         <div className="flex gap-2 mb-6">
           {TABS.map(t => (
             <Button key={t.key} variant={tab === t.key ? 'success' : 'secondary'} onClick={() => setTab(t.key)}>{t.label}</Button>
@@ -222,6 +263,25 @@ export default function UserDashboard({ user }) {
                 )
               )}
     </div>
+          </Card>
+        )}
+        {tab === 'history' && (
+          <Card>
+            <h2 className="text-xl font-semibold mb-2 text-purple-700">Riwayat Belajar</h2>
+            {loading ? <div>Loading...</div> : (
+              history.length === 0 ? <div className="text-gray-500">Belum ada riwayat belajar.</div> : (
+                <div className="space-y-4">
+                  {history.map(h => (
+                    <div key={h.id} className="border p-4 rounded-lg">
+                      <p className="font-bold">{h.tanggal}</p>
+                      <p>Mentor: {mentors.find(m => m.id === h.mentor_id)?.nama || 'N/A'}</p>
+                      <p>Mapel: {mapel.find(m => m.id === h.mata_pelajaran_id)?.nama || 'N/A'}</p>
+                      <p className="mt-2 bg-gray-100 p-2 rounded">{h.hasil_belajar}</p>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
           </Card>
         )}
       </PageContainer>

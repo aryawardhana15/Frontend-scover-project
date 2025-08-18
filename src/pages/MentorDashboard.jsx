@@ -6,8 +6,11 @@ import Button from '../components/Button';
 import Header from '../components/Header';
 import MentorProfile from './MentorProfile';
 import PengumumanCarousel from '../components/PengumumanCarousel';
+import Chat from '../components/Chat';
+import LearningReportForm from '../components/LearningReportForm';
 import { toast } from 'react-toastify';
 import { getCurrentWeekNumber, getWeekRange } from '../utils/dateUtils';
+import { ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/solid';
 
 const WEEK_LABELS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 const SESI_LABELS = ['1', '2', '3', '4', '5'];
@@ -245,13 +248,18 @@ function AvailabilityGrid({ mentorId, mingguKe, onSuccess }) {
   );
 }
 
-export default function MentorDashboard({ user }) {
+export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
   const [showProfile, setShowProfile] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const mentorId = user?.id !== undefined ? user.id : user?.mentor_id;
   const [mingguKe, setMingguKe] = useState(getCurrentWeekNumber());
   const [shownNotifIds, setShownNotifIds] = useState([]);
   const [jadwal, setJadwal] = useState([]);
   const [loadingJadwal, setLoadingJadwal] = useState(false);
+  const [selectedJadwal, setSelectedJadwal] = useState(null);
+  const [hasilBelajar, setHasilBelajar] = useState('');
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('jadwal');
 
   useEffect(() => {
     if (!mentorId) return;
@@ -286,29 +294,126 @@ export default function MentorDashboard({ user }) {
       .catch(() => setLoadingJadwal(false));
   }, [mentorId]);
 
+  const handleOpenHistoryModal = (jadwal) => {
+    setSelectedJadwal(jadwal);
+    setIsHistoryModalOpen(true);
+  };
+
+  const handleCloseHistoryModal = () => {
+    setSelectedJadwal(null);
+    setHasilBelajar('');
+    setIsHistoryModalOpen(false);
+  };
+
+  const handleSubmitHistory = () => {
+    if (!hasilBelajar.trim()) return;
+    api.post('/history-materi', {
+      jadwal_sesi_id: selectedJadwal.id,
+      hasil_belajar: hasilBelajar,
+    })
+    .then(() => {
+      setJadwal(prev => prev.map(j => j.id === selectedJadwal.id ? { ...j, status: 'completed' } : j));
+      handleCloseHistoryModal();
+      toast.success('Laporan belajar berhasil disimpan.');
+    })
+    .catch(() => {
+      toast.error('Gagal menyimpan laporan belajar.');
+    });
+  };
+
+  const handleOpenChat = async () => {
+    try {
+      // Mentors initiate conversation with an admin.
+      // The backend will find or create a conversation with the first available admin.
+      const response = await api.post('/chat/conversations/findOrCreate');
+      // The Chat component now handles conversation loading internally,
+      // so we just need to open the modal.
+      setShowChat(true);
+    } catch (error) {
+      console.error('Error opening chat:', error);
+      toast.error('Gagal membuka chat. Silakan coba lagi.');
+    }
+  };
+
   if (showProfile) {
-    return <MentorProfile user={user} onBack={() => setShowProfile(false)} />;
+    return <MentorProfile user={user} onBack={() => setShowProfile(false)} onProfileUpdate={onProfileUpdate} />;
   }
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <Header user={user} onLogout={() => window.location.reload()} onProfile={() => setShowProfile(true)} />
+      <Header user={user} onLogout={onLogout} onProfile={() => setShowProfile(true)} />
       
       <PageContainer>
         <PengumumanCarousel />
         
-        <div className="mb-8">
-          <div className="flex items-center mb-4">
-            <div className="bg-gradient-to-r from-indigo-500 to-blue-600 p-3 rounded-xl shadow-md mr-4">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-800">Selamat Datang, {user.nama}!</h1>
-              <p className="text-gray-600 mt-1">Kelola jadwal mengajar dan ketersediaan Anda dengan mudah</p>
-            </div>
+        {/* Tab Navigation */}
+        <div className="mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab('jadwal')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'jadwal'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Jadwal Mengajar
+              </button>
+              <button
+                onClick={() => setActiveTab('laporan')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'laporan'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Laporan Pembelajaran
+              </button>
+              <button
+                onClick={() => setActiveTab('ketersediaan')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'ketersediaan'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Ketersediaan
+              </button>
+            </nav>
           </div>
+        </div>
+        
+        {/* Floating Chat Button */}
+        <div className="fixed bottom-8 right-8 z-50">
+          <button
+            onClick={handleOpenChat}
+            className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition"
+          >
+            <ChatBubbleOvalLeftEllipsisIcon className="h-8 w-8" />
+          </button>
+        </div>
+
+        {/* Chat Modal */}
+        {showChat && (
+          <Chat isOpen={showChat} onClose={() => setShowChat(false)} />
+        )}
+
+        {/* Tab Content */}
+        {activeTab === 'jadwal' && (
+          <div className="space-y-6">
+            <div className="mb-8">
+              <div className="flex items-center mb-4">
+                <div className="bg-gradient-to-r from-indigo-500 to-blue-600 p-3 rounded-xl shadow-md mr-4">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-bold text-gray-800">Selamat Datang, {user.nama}!</h1>
+                  <p className="text-gray-600 mt-1">Kelola jadwal mengajar dan ketersediaan Anda dengan mudah</p>
+                </div>
+              </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-white p-4 rounded-xl shadow-sm border border-blue-100">
@@ -427,17 +532,11 @@ export default function MentorDashboard({ user }) {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <button className="text-indigo-600 hover:text-indigo-900 mr-3">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </button>
-                          <button className="text-gray-600 hover:text-gray-900">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                          {j.status === 'scheduled' && new Date(j.tanggal) < new Date() && (
+                            <Button size="sm" onClick={() => handleOpenHistoryModal(j)}>
+                              Isi Laporan
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -447,67 +546,134 @@ export default function MentorDashboard({ user }) {
             )}
           </div>
         </Card>
+          </div>
+        )}
         
-        <div className="mb-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">Ketersediaan Mengajar</h2>
-              <p className="text-sm text-gray-500 mt-1">Atur waktu yang tersedia untuk mengajar minggu ini</p>
-            </div>
-            <div className="flex items-center space-x-2 mt-4 md:mt-0">
-              <Button 
-                onClick={() => setMingguKe(mingguKe - 1)} 
-                disabled={mingguKe <= 1} 
-                size="sm" 
-                variant="outline"
-                className="border-gray-300"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </Button>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        {activeTab === 'laporan' && (
+          <div className="space-y-6">
+            <div className="mb-8">
+              <div className="flex items-center mb-4">
+                <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-3 rounded-xl shadow-md mr-4">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <input 
-                  type="number" 
-                  min={1} 
-                  max={53} 
-                  value={mingguKe} 
-                  onChange={e => setMingguKe(Number(e.target.value))} 
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
-                />
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-bold text-gray-800">Laporan Pembelajaran</h1>
+                  <p className="text-gray-600 mt-1">Buat laporan pembelajaran untuk sesi yang telah selesai</p>
+                </div>
               </div>
-              <Button 
-                onClick={() => setMingguKe(mingguKe + 1)} 
-                size="sm" 
-                variant="outline"
-                className="border-gray-300"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </Button>
+            </div>
+            
+            <LearningReportForm 
+              mentorId={mentorId} 
+              onSuccess={() => {
+                toast.success('Laporan pembelajaran berhasil disimpan!');
+                // Reload jadwal to update status
+                if (mentorId) {
+                  setLoadingJadwal(true);
+                  api.get(`/mentors/${mentorId}/jadwal`)
+                    .then(res => {
+                      setJadwal(res.data);
+                      setLoadingJadwal(false);
+                    })
+                    .catch(() => setLoadingJadwal(false));
+                }
+              }} 
+            />
+          </div>
+        )}
+        
+        {activeTab === 'ketersediaan' && (
+          <div className="space-y-6">
+            <div className="mb-8">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">Ketersediaan Mengajar</h2>
+                  <p className="text-sm text-gray-500 mt-1">Atur waktu yang tersedia untuk mengajar minggu ini</p>
+                </div>
+                <div className="flex items-center space-x-2 mt-4 md:mt-0">
+                  <Button 
+                    onClick={() => setMingguKe(mingguKe - 1)} 
+                    disabled={mingguKe <= 1} 
+                    size="sm" 
+                    variant="outline"
+                    className="border-gray-300"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </Button>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <input 
+                      type="number" 
+                      min={1} 
+                      max={53} 
+                      value={mingguKe} 
+                      onChange={e => setMingguKe(Number(e.target.value))} 
+                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
+                    />
+                  </div>
+                  <Button 
+                    onClick={() => setMingguKe(mingguKe + 1)} 
+                    size="sm" 
+                    variant="outline"
+                    className="border-gray-300"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Button>
+                </div>
+              </div>
+              
+              <AvailabilityGrid 
+                mentorId={mentorId} 
+                mingguKe={mingguKe} 
+                onSuccess={() => toast.success('Ketersediaan berhasil disimpan!', {
+                  position: "top-right",
+                  autoClose: 3000,
+                  hideProgressBar: false,
+                  closeOnClick: true,
+                  pauseOnHover: true,
+                  draggable: true,
+                  progress: undefined,
+                })} 
+              />
             </div>
           </div>
-          
-          <AvailabilityGrid 
-            mentorId={mentorId} 
-            mingguKe={mingguKe} 
-            onSuccess={() => toast.success('Ketersediaan berhasil disimpan!', {
-              position: "top-right",
-              autoClose: 3000,
-              hideProgressBar: false,
-              closeOnClick: true,
-              pauseOnHover: true,
-              draggable: true,
-              progress: undefined,
-            })} 
-          />
-        </div>
+        )}
+
+        {/* History Modal */}
+        {isHistoryModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+              <div className="p-4 border-b">
+                <h2 className="text-lg font-bold">Laporan Hasil Belajar</h2>
+                <p className="text-sm text-gray-600">
+                  Kelas: {selectedJadwal.nama_kelas} - {selectedJadwal.tanggal}
+                </p>
+              </div>
+              <div className="p-4">
+                <textarea
+                  value={hasilBelajar}
+                  onChange={(e) => setHasilBelajar(e.target.value)}
+                  placeholder="Tuliskan materi yang telah diajarkan..."
+                  className="w-full border rounded p-2 h-40"
+                />
+              </div>
+              <div className="p-4 border-t flex justify-end gap-2">
+                <Button variant="secondary" onClick={handleCloseHistoryModal}>Batal</Button>
+                <Button onClick={handleSubmitHistory}>Simpan</Button>
+              </div>
+            </div>
+          </div>
+        )}
       </PageContainer>
     </div>
   );

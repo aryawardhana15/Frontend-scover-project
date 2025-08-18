@@ -8,17 +8,33 @@ import UserDashboard from "./pages/UserDashboard";
 import Toast from "./components/Toast";
 
 function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
+
+  const handleLogin = (userData) => {
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setUser(null);
+  };
+
+  const handleProfileUpdate = (updatedUserData) => {
+    const newUser = { ...user, ...updatedUserData };
+    localStorage.setItem('user', JSON.stringify(newUser));
+    setUser(newUser);
+  };
 
   return (
     <>
       <Toast />
       <Router>
         <Routes>
-          {!user && <Route path="/*" element={<Login onLogin={setUser} />} />}
-          {user?.role === "admin" && <Route path="/*" element={<AdminDashboard user={user} />} />}
-          {user?.role === "mentor" && <Route path="/*" element={<MentorDashboard user={user} />} />}
-          {user?.role === "user" && <Route path="/*" element={<UserDashboard user={user} />} />}
+          {!user && <Route path="/*" element={<Login onLogin={handleLogin} />} />}
+          {user?.role === "admin" && <Route path="/*" element={<AdminDashboard user={user} onLogout={handleLogout} />} />}
+          {user?.role === "mentor" && <Route path="/*" element={<MentorDashboard user={user} onLogout={handleLogout} onProfileUpdate={handleProfileUpdate} />} />}
+          {user?.role === "user" && <Route path="/*" element={<UserDashboard user={user} onLogout={handleLogout} />} />}
          
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
