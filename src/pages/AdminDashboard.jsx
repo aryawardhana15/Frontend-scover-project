@@ -719,7 +719,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                     {mentorMap[j.mentor_id] || '-'}
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {j.tanggal}
+                                    {new Date(j.tanggal).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {j.sesi}
@@ -796,7 +796,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                     {mentorMap[p.mentor_id] || '-'}
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {p.tanggal}
+                                    {new Date(p.tanggal).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {p.sesi}
@@ -1113,14 +1113,14 @@ export default function AdminDashboard({ user, onLogout }) {
                                 {p.gambar_url && (
                                   <div className="mt-3">
                                     <img 
-                                      src={`http://localhost:3001${p.gambar_url}`} 
+                                      src={`http://localhost:3002${p.gambar_url}`} 
                                       alt={p.judul} 
                                       className="max-w-full h-auto rounded-lg border border-gray-200"
                                     />
                                   </div>
                                 )}
                                 <div className="mt-3 text-xs text-gray-500">
-                                  Dibuat pada: {new Date(p.created_at).toLocaleString('id-ID')}
+                                  Dibuat pada: {new Date(p.created_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                 </div>
                               </div>
                             </motion.div>
@@ -1199,7 +1199,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                {conversations.map((item, index) => (
                                  <tr key={index} className="hover:bg-gray-50/50 transition-colors">
                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                     {item.tanggal}
+                                     {new Date(item.tanggal).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
                                    </td>
                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                      {item.nama_kelas || '-'}

@@ -6,12 +6,26 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import PengumumanCarousel from '../components/PengumumanCarousel';
 import Chat from '../components/Chat';
-import { ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/solid';
+import { 
+  ChatBubbleOvalLeftEllipsisIcon, 
+  AcademicCapIcon, 
+  ClockIcon, 
+  CalendarIcon, 
+  UserCircleIcon, 
+  BookOpenIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon as ClockOutlineIcon
+} from '@heroicons/react/24/outline';
+import { 
+  ChatBubbleOvalLeftEllipsisIcon as ChatSolidIcon,
+  AcademicCapIcon as AcademicSolidIcon 
+} from '@heroicons/react/24/solid';
 
 const TABS = [
-  { key: 'jadwal', label: 'Jadwal Saya' },
-  { key: 'permintaan', label: 'Minta Jadwal' },
-  { key: 'history', label: 'Riwayat Belajar' },
+  { key: 'jadwal', label: 'Jadwal Saya', icon: CalendarIcon },
+  { key: 'permintaan', label: 'Minta Jadwal', icon: ClockOutlineIcon },
+  { key: 'history', label: 'Riwayat Belajar', icon: BookOpenIcon },
 ];
 
 export default function UserDashboard({ user, onLogout }) {
@@ -33,16 +47,16 @@ export default function UserDashboard({ user, onLogout }) {
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
   const [showChat, setShowChat] = useState(false);
-  const [conversationId, setConversationId] = useState(null);
   const [history, setHistory] = useState([]);
 
   const handleOpenChat = () => {
-    api.post('/chat/conversations')
-      .then(res => {
-        setConversationId(res.data.id);
-        setShowChat(true);
-      })
-      .catch(console.error);
+    console.log('Opening chat, current showChat:', showChat); // Debug log
+    setShowChat(true);
+  };
+
+  const handleCloseChat = () => {
+    console.log('Closing chat'); // Debug log
+    setShowChat(false);
   };
 
   // Fetch data awal
@@ -112,6 +126,36 @@ export default function UserDashboard({ user, onLogout }) {
     }
   };
 
+  // Format tanggal Indonesia
+  const formatDate = (dateString) => {
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    return new Date(dateString).toLocaleDateString('id-ID', options);
+  };
+
+  // Format waktu
+  const formatTime = (timeString) => {
+    return timeString.substring(0, 5);
+  };
+
+  // Status badge dengan styling
+  const StatusBadge = ({ status }) => {
+    const statusConfig = {
+      pending: { color: 'bg-yellow-100 text-yellow-800', icon: ClockIcon },
+      approved: { color: 'bg-green-100 text-green-800', icon: CheckCircleIcon },
+      rejected: { color: 'bg-red-100 text-red-800', icon: XCircleIcon },
+      completed: { color: 'bg-blue-100 text-blue-800', icon: CheckCircleIcon }
+    };
+    
+    const { color, icon: Icon } = statusConfig[status] || statusConfig.pending;
+    
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${color}`}>
+        <Icon className="h-3 w-3 mr-1" />
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </span>
+    );
+  };
+
   return (
     <>
       <Header user={user} onLogout={onLogout} />
@@ -122,165 +166,357 @@ export default function UserDashboard({ user, onLogout }) {
         <div className="fixed bottom-8 right-8 z-50">
           <button
             onClick={handleOpenChat}
-            className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition"
+            className="bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 transition-all transform hover:scale-110 flex items-center justify-center"
+            aria-label="Buka chat dengan admin"
           >
-            <ChatBubbleOvalLeftEllipsisIcon className="h-8 w-8" />
+            <ChatSolidIcon className="h-6 w-6" />
           </button>
         </div>
 
-        {/* Chat Modal */}
+        {/* Chat Component - Pastikan komponen ini ada dan visible */}
         {showChat && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-              <div className="flex justify-between items-center p-4 border-b">
-                <h2 className="text-lg font-bold">Chat dengan Admin</h2>
-                <button onClick={() => setShowChat(false)} className="text-gray-500 hover:text-gray-800">&times;</button>
+          <div className="fixed inset-0 z-50 flex items-end justify-end p-4">
+            <div className="w-full max-w-md h-96 bg-white rounded-lg shadow-xl border border-gray-200">
+              <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-indigo-600 text-white rounded-t-lg">
+                <h3 className="font-semibold">Chat dengan Admin</h3>
+                <button 
+                  onClick={handleCloseChat}
+                  className="text-white hover:text-gray-200"
+                >
+                  <XCircleIcon className="h-5 w-5" />
+                </button>
               </div>
-              <Chat conversationId={conversationId} user={user} />
+              <div className="p-4 h-full flex items-center justify-center">
+                <p className="text-gray-500">Chat sedang dalam pengembangan...</p>
+              </div>
             </div>
           </div>
         )}
 
-        <h1 className="text-2xl font-bold mb-4">Dashboard Siswa</h1>
-        <div className="flex gap-2 mb-6">
-          {TABS.map(t => (
-            <Button key={t.key} variant={tab === t.key ? 'success' : 'secondary'} onClick={() => setTab(t.key)}>{t.label}</Button>
+        {/* Alternatif: Gunakan komponen Chat yang sudah ada jika sudah dibuat */}
+        <Chat isOpen={showChat} onClose={handleCloseChat} />
+
+        <div className="mb-6 bg-gradient-to-r from-indigo-50 to-blue-50 p-6 rounded-2xl shadow-sm border border-indigo-100">
+          <h1 className="text-3xl font-bold text-indigo-800 mb-2 flex items-center">
+            <AcademicCapIcon className="h-8 w-8 mr-2" />
+            Dashboard Siswa
+          </h1>
+          <p className="text-indigo-600">Selamat belajar, {user.name}! Mari eksplorasi pengetahuan baru hari ini.</p>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex flex-wrap gap-2 mb-8 border-b border-gray-200">
+          {TABS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`flex items-center px-4 py-3 rounded-t-lg font-medium transition-all ${
+                tab === key
+                  ? 'bg-white text-indigo-700 border-t-2 border-l-2 border-r-2 border-indigo-600 shadow-sm'
+                  : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'
+              }`}
+            >
+              <Icon className="h-5 w-5 mr-2" />
+              {label}
+            </button>
           ))}
         </div>
+
+        {/* Tab Content */}
         {tab === 'jadwal' && (
-          <Card>
-            <h2 className="text-xl font-semibold mb-2 text-blue-700">Jadwal Belajar Saya</h2>
-            {loading ? <div>Loading...</div> : (
-              jadwal.length === 0 ? <div className="text-gray-500">Belum ada jadwal.</div> : (
-                <table className="min-w-full border">
-                  <thead>
+          <Card className="overflow-hidden">
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white border border-indigo-600 rounded-lg">
+              <h2 className="text-xl font-semibold flex items-center">
+                <CalendarIcon className="h-6 w-6 mr-2" />
+                Jadwal Belajar Saya
+              </h2>
+              <p className="text-indigo-100 text-sm mt-1">Jadwal belajar yang telah ditetapkan untuk Anda</p>
+            </div>
+            
+            {loading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+              </div>
+            ) : jadwal.length === 0 ? (
+              <div className="text-center py-12 px-4">
+                <CalendarIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-700 mb-2">Belum ada jadwal</h3>
+                <p className="text-gray-500">Silakan minta jadwal belajar melalui tab "Minta Jadwal"</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <th className="border px-2 py-1">Tanggal</th>
-                      <th className="border px-2 py-1">Sesi</th>
-                      <th className="border px-2 py-1">Jam</th>
-                      <th className="border px-2 py-1">Kelas</th>
-                      <th className="border px-2 py-1">Mentor</th>
-                      <th className="border px-2 py-1">Status</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sesi</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jam</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kelas</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mentor</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="bg-white divide-y divide-gray-200">
                     {jadwal.map(j => (
-                      <tr key={j.id}>
-                        <td className="border px-2 py-1">{j.tanggal}</td>
-                        <td className="border px-2 py-1">{j.sesi}</td>
-                        <td className="border px-2 py-1">{j.jam_mulai} - {j.jam_selesai}</td>
-                        <td className="border px-2 py-1">{j.kelas_id}</td>
-                        <td className="border px-2 py-1">{j.mentor_id}</td>
-                        <td className="border px-2 py-1">{j.status}</td>
+                      <tr key={j.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{formatDate(j.tanggal)}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">Sesi {j.sesi}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900 flex items-center">
+                            <ClockIcon className="h-4 w-4 mr-1 text-indigo-500" />
+                            {formatTime(j.jam_mulai)} - {formatTime(j.jam_selesai)}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{kelas.find(k => k.id === j.kelas_id)?.nama || j.kelas_id}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <UserCircleIcon className="h-5 w-5 mr-1 text-gray-400" />
+                            <div className="text-sm text-gray-900">{mentors.find(m => m.id === j.mentor_id)?.nama || j.mentor_id}</div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <StatusBadge status={j.status} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              )
+              </div>
             )}
           </Card>
         )}
+        
         {tab === 'permintaan' && (
-          <Card>
-            <h2 className="text-xl font-semibold mb-2 text-green-700">Minta Jadwal Belajar</h2>
-            <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
-              <div>
-                <label className="block mb-1">Kelas</label>
-                <select value={selectedKelas} onChange={e => setSelectedKelas(e.target.value)} className="w-full border rounded p-2" required>
-                  <option value="">-- Pilih Kelas --</option>
-                  {kelas.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
-                </select>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="h-fit">
+              <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-4 text-white rounded-t-lg">
+                <h2 className="text-xl font-semibold flex items-center">
+                  <ClockOutlineIcon className="h-6 w-6 mr-2" />
+                  Minta Jadwal Belajar
+                </h2>
+                <p className="text-green-100 text-sm mt-1">Isi formulir untuk meminta jadwal belajar baru</p>
               </div>
-              <div>
-                <label className="block mb-1">Mata Pelajaran</label>
-                <select value={selectedMapel} onChange={e => setSelectedMapel(e.target.value)} className="w-full border rounded p-2" required>
-                  <option value="">-- Pilih Mapel --</option>
-                  {mapel.map(mp => <option key={mp.id} value={mp.id}>{mp.nama}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block mb-1">Tanggal</label>
-                <input type="date" value={selectedTanggal} onChange={e => setSelectedTanggal(e.target.value)} className="w-full border rounded p-2" required />
-              </div>
-              <div>
-                <label className="block mb-1">Sesi</label>
-                <select value={selectedSesi} onChange={e => setSelectedSesi(e.target.value)} className="w-full border rounded p-2" required>
-                  {[1,2,3,4,5].map(s => <option key={s} value={s}>Sesi {s}</option>)}
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block mb-1">Mentor</label>
-                <select 
-                  value={selectedMentor} 
-                  onChange={e => setSelectedMentor(e.target.value)} 
-                  className="w-full border rounded p-2" 
-                  required
-                  disabled={mentorOptionsLoading}
-                >
-                  <option value="">
-                    {mentorOptionsLoading 
-                      ? "Loading mentor..." 
-                      : mentorOptions.length === 0 
-                        ? "-- Tidak ada mentor available --" 
-                        : "-- Pilih Mentor --"
-                    }
-                  </option>
-                  {mentorOptions.map(m => <option key={m.id} value={m.id}>{m.nama}</option>)}
-                </select>
-              </div>
-              <div className="md:col-span-2 flex gap-2 items-center">
-                <Button type="submit" variant="success" disabled={submitLoading}>Kirim Permintaan</Button>
-                {submitError && <span className="text-red-600">{submitError}</span>}
-                {submitSuccess && <span className="text-green-600">{submitSuccess}</span>}
-              </div>
-            </form>
-            <div className="mt-8">
-              <h3 className="text-lg font-semibold mb-2">Status Permintaan Jadwal</h3>
-              {loading ? <div>Loading...</div> : (
-                permintaan.length === 0 ? <div className="text-gray-500">Belum ada permintaan jadwal.</div> : (
-                  <table className="min-w-full border">
-                    <thead>
-                      <tr>
-                        <th className="border px-2 py-1">Tanggal</th>
-                        <th className="border px-2 py-1">Sesi</th>
-                        <th className="border px-2 py-1">Kelas</th>
-                        <th className="border px-2 py-1">Mentor</th>
-                        <th className="border px-2 py-1">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {permintaan.map(p => (
-                        <tr key={p.id}>
-                          <td className="border px-2 py-1">{p.tanggal}</td>
-                          <td className="border px-2 py-1">{p.sesi}</td>
-                          <td className="border px-2 py-1">{p.kelas_id}</td>
-                          <td className="border px-2 py-1">{p.mentor_id}</td>
-                          <td className="border px-2 py-1">{p.status}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )
-              )}
-    </div>
-          </Card>
-        )}
-        {tab === 'history' && (
-          <Card>
-            <h2 className="text-xl font-semibold mb-2 text-purple-700">Riwayat Belajar</h2>
-            {loading ? <div>Loading...</div> : (
-              history.length === 0 ? <div className="text-gray-500">Belum ada riwayat belajar.</div> : (
-                <div className="space-y-4">
-                  {history.map(h => (
-                    <div key={h.id} className="border p-4 rounded-lg">
-                      <p className="font-bold">{h.tanggal}</p>
-                      <p>Mentor: {mentors.find(m => m.id === h.mentor_id)?.nama || 'N/A'}</p>
-                      <p>Mapel: {mapel.find(m => m.id === h.mata_pelajaran_id)?.nama || 'N/A'}</p>
-                      <p className="mt-2 bg-gray-100 p-2 rounded">{h.hasil_belajar}</p>
-                    </div>
-                  ))}
+              
+              <form className="p-4 space-y-4" onSubmit={handleSubmit}>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Kelas</label>
+                  <select 
+                    value={selectedKelas} 
+                    onChange={e => setSelectedKelas(e.target.value)} 
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                    required
+                  >
+                    <option value="">-- Pilih Kelas --</option>
+                    {kelas.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
+                  </select>
                 </div>
-              )
+                
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Mata Pelajaran</label>
+                  <select 
+                    value={selectedMapel} 
+                    onChange={e => setSelectedMapel(e.target.value)} 
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                    required
+                  >
+                    <option value="">-- Pilih Mata Pelajaran --</option>
+                    {mapel.map(mp => <option key={mp.id} value={mp.id}>{mp.nama}</option>)}
+                  </select>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Tanggal</label>
+                  <input 
+                    type="date" 
+                    value={selectedTanggal} 
+                    onChange={e => setSelectedTanggal(e.target.value)} 
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                    required 
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Sesi</label>
+                  <select 
+                    value={selectedSesi} 
+                    onChange={e => setSelectedSesi(e.target.value)} 
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                    required
+                  >
+                    {[1,2,3,4,5].map(s => <option key={s} value={s}>Sesi {s}</option>)}
+                  </select>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Mentor</label>
+                  <select 
+                    value={selectedMentor} 
+                    onChange={e => setSelectedMentor(e.target.value)} 
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition disabled:opacity-50"
+                    required
+                    disabled={mentorOptionsLoading}
+                  >
+                    <option value="">
+                      {mentorOptionsLoading 
+                        ? "Memuat mentor yang tersedia..." 
+                        : mentorOptions.length === 0 
+                          ? "-- Tidak ada mentor yang tersedia --" 
+                          : "-- Pilih Mentor --"
+                      }
+                    </option>
+                    {mentorOptions.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.nama} - {mapel.find(mp => mp.id === selectedMapel)?.nama || 'Mata Pelajaran'}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500">
+                    Hanya mentor yang tersedia pada tanggal dan sesi terpilih yang ditampilkan
+                  </p>
+                </div>
+                
+                <div className="pt-2">
+                  <Button 
+                    type="submit" 
+                    variant="success" 
+                    className="w-full py-3 flex justify-center items-center" 
+                    disabled={submitLoading}
+                  >
+                    {submitLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Mengirim...
+                      </>
+                    ) : 'Kirim Permintaan Jadwal'}
+                  </Button>
+                  
+                  {submitError && (
+                    <div className="mt-3 p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 flex items-start">
+                      <XCircleIcon className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+                      <span>{submitError}</span>
+                    </div>
+                  )}
+                  
+                  {submitSuccess && (
+                    <div className="mt-3 p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 flex items-start">
+                      <CheckCircleIcon className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+                      <span>{submitSuccess}</span>
+                    </div>
+                  )}
+                </div>
+              </form>
+            </Card>
+            
+            <Card>
+              <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 text-white rounded-t-lg">
+                <h3 className="text-lg font-semibold flex items-center">
+                  <ClockOutlineIcon className="h-5 w-5 mr-2" />
+                  Status Permintaan Jadwal
+                </h3>
+                <p className="text-purple-100 text-sm mt-1">Riwayat permintaan jadwal yang Anda buat</p>
+              </div>
+              
+              {loading ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+                </div>
+              ) : permintaan.length === 0 ? (
+                <div className="text-center py-12 px-4">
+                  <ClockOutlineIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-700 mb-2">Belum ada permintaan jadwal</h3>
+                  <p className="text-gray-500">Isi formulir di samping untuk membuat permintaan jadwal baru</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {permintaan.map(p => {
+                    const mentor = mentors.find(m => m.id === p.mentor_id);
+                    const kelasItem = kelas.find(k => k.id === p.kelas_id);
+                    const mapelItem = mapel.find(m => m.id === p.mata_pelajaran_id);
+                    
+                    return (
+                      <div key={p.id} className="p-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {formatDate(p.tanggal)} - Sesi {p.sesi}
+                            </p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {kelasItem?.nama || p.kelas_id} • {mapelItem?.nama || 'Mata Pelajaran'}
+                            </p>
+                            <p className="text-sm text-gray-600 flex items-center mt-1">
+                              <UserCircleIcon className="h-4 w-4 mr-1" />
+                              {mentor?.nama || p.mentor_id}
+                            </p>
+                          </div>
+                          <StatusBadge status={p.status} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
+        
+        {tab === 'history' && (
+          <Card className="overflow-hidden">
+            <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-4 text-white">
+              <h2 className="text-xl font-semibold flex items-center">
+                <BookOpenIcon className="h-6 w-6 mr-2" />
+                Riwayat Belajar
+              </h2>
+              <p className="text-purple-100 text-sm mt-1">Catatan pembelajaran yang telah Anda selesaikan</p>
+            </div>
+            
+            {loading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+              </div>
+            ) : history.length === 0 ? (
+              <div className="text-center py-12 px-4">
+                <BookOpenIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-700 mb-2">Belum ada riwayat belajar</h3>
+                <p className="text-gray-500">Riwayat pembelajaran akan muncul di sini setelah sesi belajar selesai</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-200">
+                {history.map(h => {
+                  const mentor = mentors.find(m => m.id === h.mentor_id);
+                  const mapelItem = mapel.find(m => m.id === h.mata_pelajaran_id);
+                  
+                  return (
+                    <div key={h.id} className="p-6 hover:bg-gray-50 transition-colors">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="font-medium text-gray-900 text-lg">
+                            {mapelItem?.nama || 'Mata Pelajaran'}
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1 flex items-center">
+                            <UserCircleIcon className="h-4 w-4 mr-1" />
+                            Mentor: {mentor?.nama || h.mentor_id}
+                          </p>
+                        </div>
+                        <p className="text-sm text-gray-500">{formatDate(h.tanggal)}</p>
+                      </div>
+                      
+                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <h4 className="font-medium text-gray-700 mb-2 flex items-center">
+                          <AcademicCapIcon className="h-4 w-4 mr-1 text-indigo-500" />
+                          Hasil Pembelajaran
+                        </h4>
+                        <p className="text-gray-700 whitespace-pre-line">{h.hasil_belajar}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </Card>
         )}

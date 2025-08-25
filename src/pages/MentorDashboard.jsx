@@ -7,7 +7,6 @@ import Header from '../components/Header';
 import MentorProfile from './MentorProfile';
 import PengumumanCarousel from '../components/PengumumanCarousel';
 import Chat from '../components/Chat';
-import LearningReportForm from '../components/LearningReportForm';
 import { toast } from 'react-toastify';
 import { getCurrentWeekNumber, getWeekRange } from '../utils/dateUtils';
 import { ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/solid';
@@ -258,8 +257,11 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
   const [loadingJadwal, setLoadingJadwal] = useState(false);
   const [selectedJadwal, setSelectedJadwal] = useState(null);
   const [hasilBelajar, setHasilBelajar] = useState('');
+  const [materiDiajarkan, setMateriDiajarkan] = useState('');
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('jadwal');
+  const [learningReports, setLearningReports] = useState([]);
+  const [loadingLearningReports, setLoadingLearningReports] = useState(false);
 
   useEffect(() => {
     if (!mentorId) return;
@@ -302,19 +304,28 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
   const handleCloseHistoryModal = () => {
     setSelectedJadwal(null);
     setHasilBelajar('');
+    setMateriDiajarkan('');
     setIsHistoryModalOpen(false);
   };
 
   const handleSubmitHistory = () => {
-    if (!hasilBelajar.trim()) return;
+    if (!hasilBelajar.trim() || !materiDiajarkan.trim()) {
+      toast.error('Hasil belajar dan materi diajarkan wajib diisi.');
+      return;
+    }
     api.post('/history-materi', {
       jadwal_sesi_id: selectedJadwal.id,
       hasil_belajar: hasilBelajar,
+      materi_diajarkan: materiDiajarkan,
     })
     .then(() => {
       setJadwal(prev => prev.map(j => j.id === selectedJadwal.id ? { ...j, status: 'completed' } : j));
       handleCloseHistoryModal();
       toast.success('Laporan belajar berhasil disimpan.');
+      // Optionally refetch learning reports if the tab is active
+      if (activeTab === 'laporan') {
+        fetchLearningReports();
+      }
     })
     .catch(() => {
       toast.error('Gagal menyimpan laporan belajar.');
@@ -334,6 +345,26 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
       toast.error('Gagal membuka chat. Silakan coba lagi.');
     }
   };
+
+  const fetchLearningReports = () => {
+    if (!mentorId) return;
+    setLoadingLearningReports(true);
+    api.get(`/history-materi/mentor/${mentorId}`)
+      .then(res => {
+        setLearningReports(res.data);
+        setLoadingLearningReports(false);
+      })
+      .catch(() => {
+        toast.error('Gagal memuat laporan pembelajaran.');
+        setLoadingLearningReports(false);
+      });
+  };
+
+  useEffect(() => {
+    if (activeTab === 'laporan' && mentorId) {
+      fetchLearningReports();
+    }
+  }, [activeTab, mentorId]);
 
   if (showProfile) {
     return <MentorProfile user={user} onBack={() => setShowProfile(false)} onProfileUpdate={onProfileUpdate} />;
@@ -565,22 +596,72 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
               </div>
             </div>
             
-            <LearningReportForm 
-              mentorId={mentorId} 
-              onSuccess={() => {
-                toast.success('Laporan pembelajaran berhasil disimpan!');
-                // Reload jadwal to update status
-                if (mentorId) {
-                  setLoadingJadwal(true);
-                  api.get(`/mentors/${mentorId}/jadwal`)
-                    .then(res => {
-                      setJadwal(res.data);
-                      setLoadingJadwal(false);
-                    })
-                    .catch(() => setLoadingJadwal(false));
-                }
-              }} 
-            />
+            <Card className="mb-8 border-0 bg-white rounded-2xl shadow-xl overflow-hidden">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-800">Riwayat Laporan Pembelajaran</h2>
+                    <p className="text-sm text-gray-500 mt-1">Daftar laporan pembelajaran yang telah Anda buat</p>
+                  </div>
+                </div>
+
+                {loadingLearningReports ? (
+                  <div className="flex justify-center items-center h-64">
+                    <div className="animate-pulse flex flex-col items-center">
+                      <div className="w-12 h-12 bg-gray-200 rounded-full mb-4"></div>
+                      <p className="text-gray-500">Memuat laporan pembelajaran...</p>
+                    </div>
+                  </div>
+                ) : learningReports.length === 0 ? (
+                  <div className="text-center py-12">
+                    <svg className="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    <h3 className="mt-2 text-lg font-medium text-gray-900">Belum ada laporan pembelajaran</h3>
+                    <p className="mt-1 text-sm text-gray-500">Anda belum membuat laporan pembelajaran untuk sesi yang telah selesai.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kelas</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mata Pelajaran</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sesi</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Materi Diajarkan</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hasil Belajar</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {learningReports.map((report) => (
+                          <tr key={report.id} className="hover:bg-gray-50 transition-colors duration-150">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">{report.tanggal}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">{report.nama_kelas}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{report.nama_mapel}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">Sesi {report.sesi}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="text-sm text-gray-900 line-clamp-2">{report.materi_diajarkan}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="text-sm text-gray-900 line-clamp-2">{report.hasil_belajar}</div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </Card>
           </div>
         )}
         
@@ -660,12 +741,26 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
                 </p>
               </div>
               <div className="p-4">
-                <textarea
-                  value={hasilBelajar}
-                  onChange={(e) => setHasilBelajar(e.target.value)}
-                  placeholder="Tuliskan materi yang telah diajarkan..."
-                  className="w-full border rounded p-2 h-40"
-                />
+                <div className="mb-4">
+                  <label htmlFor="materiDiajarkan" className="block text-sm font-medium text-gray-700 mb-1">Materi Diajarkan</label>
+                  <textarea
+                    id="materiDiajarkan"
+                    value={materiDiajarkan}
+                    onChange={(e) => setMateriDiajarkan(e.target.value)}
+                    placeholder="Tuliskan materi yang telah diajarkan..."
+                    className="w-full border rounded p-2 h-24 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="hasilBelajar" className="block text-sm font-medium text-gray-700 mb-1">Hasil Belajar</label>
+                  <textarea
+                    id="hasilBelajar"
+                    value={hasilBelajar}
+                    onChange={(e) => setHasilBelajar(e.target.value)}
+                    placeholder="Tuliskan hasil belajar siswa..."
+                    className="w-full border rounded p-2 h-24 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
               </div>
               <div className="p-4 border-t flex justify-end gap-2">
                 <Button variant="secondary" onClick={handleCloseHistoryModal}>Batal</Button>
