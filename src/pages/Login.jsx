@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import api from '../api/axios';
 import { Eye, EyeOff, Mail, Lock, User, BookOpen, GraduationCap, Users, Award, Star, Brain } from 'lucide-react';
 
 export default function Login({ onLogin }) {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('admin');
@@ -25,6 +27,15 @@ export default function Login({ onLogin }) {
       onLogin(res.data);
       if (res.data.token) {
         localStorage.setItem('token', res.data.token);
+      }
+      
+      // Redirect to appropriate dashboard
+      if (res.data.role === 'admin') {
+        navigate('/admin');
+      } else if (res.data.role === 'mentor') {
+        navigate('/mentor');
+      } else if (res.data.role === 'user') {
+        navigate('/user');
       }
     } catch (err) {
       setError('Login gagal. Cek email/password.');
