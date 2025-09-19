@@ -1,6 +1,6 @@
 import axios from "axios";
 const api = axios.create({
-  baseURL: "http://localhost:3002/api", // ganti sesuai backend
+  baseURL: "https://api2.myscover.my.id/api", // ganti sesuai backend
 });
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token');

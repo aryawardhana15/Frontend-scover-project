@@ -14,8 +14,8 @@ const HomePage = () => {
     e.preventDefault();
     try {
       const endpoint = registerData.role === 'mentor' 
-        ? 'http://localhost:5000/api/mentors/register'
-        : 'http://localhost:5000/api/users/register';
+        ? 'https://api2.myscover.my.id/api/mentors/register'
+        : 'https://api2.myscover.my.id/api/users/register';
         
       const response = await fetch(endpoint, {
         method: 'POST',
