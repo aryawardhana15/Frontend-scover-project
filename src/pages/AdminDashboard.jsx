@@ -971,7 +971,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                     <div className="flex items-center">
                                       <div className="flex-shrink-0 h-10 w-10">
                                         {u.foto_profil ? (
-                                          <img className="h-10 w-10 rounded-full object-cover" src={`http://localhost:3001/${u.foto_profil}`} alt={u.nama} />
+                                          <img className="h-10 w-10 rounded-full object-cover" src={`https://myscover.my.id/${u.foto_profil}`} alt={u.nama} />
                                         ) : (
                                           <div className="h-10 w-10 rounded-full bg-gradient-to-r from-green-100 to-teal-100 flex items-center justify-center">
                                             <span className="text-green-600 font-medium">{u.nama ? u.nama.charAt(0) : '?'}</span>
@@ -1113,7 +1113,7 @@ export default function AdminDashboard({ user, onLogout }) {
                                 {p.gambar_url && (
                                   <div className="mt-3">
                                     <img 
-                                      src={`http://localhost:3002${p.gambar_url}`} 
+                                      src={`https://myscover.my.id${p.gambar_url}`} 
                                       alt={p.judul} 
                                       className="max-w-full h-auto rounded-lg border border-gray-200"
                                     />

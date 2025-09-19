@@ -36,7 +36,7 @@ export default function PengumumanCarousel() {
           className={`absolute w-full h-full transition-opacity duration-500 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
         >
           <img
-            src={`http://localhost:3002${p.gambar_url}`}
+            src={`https://myscover.my.id${p.gambar_url}`}
             alt={p.judul}
             className="w-full h-full object-cover"
           />

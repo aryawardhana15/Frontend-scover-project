@@ -55,7 +55,7 @@ export default function MentorProfile({ user, onBack, onProfileUpdate }) {
       });
   };
 
-  const profileImageUrl = preview || (user?.foto_profil ? `http://localhost:3001/${user.foto_profil}` : null);
+  const profileImageUrl = preview || (user?.foto_profil ? `https://myscover.my.id/${user.foto_profil}` : null);
 
   return (
     <div className="max-w-lg mx-auto mt-8">
