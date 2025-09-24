@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import api from '../api/axios';
+import api from '../config/api';
 import PageContainer from '../components/PageContainer';
 import Card from '../components/Card';
 import Button from '../components/Button';
@@ -262,6 +262,10 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
   const [activeTab, setActiveTab] = useState('jadwal');
   const [learningReports, setLearningReports] = useState([]);
   const [loadingLearningReports, setLoadingLearningReports] = useState(false);
+  const [mentorMataPelajaran, setMentorMataPelajaran] = useState([]);
+  const [allMataPelajaran, setAllMataPelajaran] = useState([]);
+  const [loadingMataPelajaran, setLoadingMataPelajaran] = useState(false);
+  const [selectedMataPelajaran, setSelectedMataPelajaran] = useState('');
 
   useEffect(() => {
     if (!mentorId) return;
@@ -366,6 +370,80 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
     }
   }, [activeTab, mentorId]);
 
+  // Fetch mata pelajaran data
+  const fetchMataPelajaran = () => {
+    if (!mentorId) return;
+    setLoadingMataPelajaran(true);
+    
+    // Fetch all available mata pelajaran
+    api.get('/mata-pelajaran')
+      .then(res => {
+        setAllMataPelajaran(res.data);
+      })
+      .catch(() => {
+        toast.error('Gagal memuat daftar mata pelajaran');
+      });
+    
+    // Fetch mentor's current mata pelajaran
+    api.get(`/mentor-mata-pelajaran/by-mentor?mentor_id=${mentorId}`)
+      .then(res => {
+        setMentorMataPelajaran(res.data);
+        setLoadingMataPelajaran(false);
+      })
+      .catch(() => {
+        toast.error('Gagal memuat mata pelajaran mentor');
+        setLoadingMataPelajaran(false);
+      });
+  };
+
+  // Add mata pelajaran to mentor
+  const handleAddMataPelajaran = () => {
+    if (!selectedMataPelajaran) {
+      toast.error('Pilih mata pelajaran terlebih dahulu');
+      return;
+    }
+    
+    // Check if already exists
+    const exists = mentorMataPelajaran.find(mp => mp.mata_pelajaran_id == selectedMataPelajaran);
+    if (exists) {
+      toast.error('Mata pelajaran sudah ditambahkan');
+      return;
+    }
+    
+    api.post('/mentor-mata-pelajaran', {
+      mentor_id: mentorId,
+      mata_pelajaran_id: selectedMataPelajaran
+    })
+    .then(() => {
+      toast.success('Mata pelajaran berhasil ditambahkan');
+      fetchMataPelajaran(); // Refresh data
+      setSelectedMataPelajaran('');
+    })
+    .catch(err => {
+      const errorMsg = err.response?.data?.error || 'Gagal menambahkan mata pelajaran';
+      toast.error(errorMsg);
+    });
+  };
+
+  // Remove mata pelajaran from mentor
+  const handleRemoveMataPelajaran = (id) => {
+    api.delete(`/mentor-mata-pelajaran/${id}`)
+    .then(() => {
+      toast.success('Mata pelajaran berhasil dihapus');
+      fetchMataPelajaran(); // Refresh data
+    })
+    .catch(err => {
+      const errorMsg = err.response?.data?.error || 'Gagal menghapus mata pelajaran';
+      toast.error(errorMsg);
+    });
+  };
+
+  useEffect(() => {
+    if (activeTab === 'mata-pelajaran' && mentorId) {
+      fetchMataPelajaran();
+    }
+  }, [activeTab, mentorId]);
+
   if (showProfile) {
     return <MentorProfile user={user} onBack={() => setShowProfile(false)} onProfileUpdate={onProfileUpdate} />;
   }
@@ -410,6 +488,16 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
                 }`}
               >
                 Ketersediaan
+              </button>
+              <button
+                onClick={() => setActiveTab('mata-pelajaran')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'mata-pelajaran'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Mata Pelajaran
               </button>
             </nav>
           </div>
@@ -727,6 +815,127 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
                 })} 
               />
             </div>
+          </div>
+        )}
+
+        {activeTab === 'mata-pelajaran' && (
+          <div className="space-y-6">
+            <div className="mb-8">
+              <div className="flex items-center mb-4">
+                <div className="bg-gradient-to-r from-purple-500 to-pink-600 p-3 rounded-xl shadow-md mr-4">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-bold text-gray-800">Mata Pelajaran</h1>
+                  <p className="text-gray-600 mt-1">Kelola mata pelajaran yang dapat Anda ajarkan</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Add Mata Pelajaran Section */}
+            <Card className="mb-8 border-0 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl shadow-xl overflow-hidden">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-800">Tambah Mata Pelajaran</h2>
+                    <p className="text-sm text-gray-600 mt-1">Pilih mata pelajaran yang dapat Anda ajarkan</p>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <select
+                      value={selectedMataPelajaran}
+                      onChange={(e) => setSelectedMataPelajaran(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
+                    >
+                      <option value="">Pilih mata pelajaran...</option>
+                      {allMataPelajaran
+                        .filter(mp => !mentorMataPelajaran.find(mmp => mmp.mata_pelajaran_id == mp.id))
+                        .map(mp => (
+                          <option key={mp.id} value={mp.id}>
+                            {mp.nama}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <Button
+                    onClick={handleAddMataPelajaran}
+                    disabled={!selectedMataPelajaran}
+                    variant="primary"
+                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Tambah
+                  </Button>
+                </div>
+              </div>
+            </Card>
+
+            {/* Current Mata Pelajaran */}
+            <Card className="mb-8 border-0 bg-white rounded-2xl shadow-xl overflow-hidden">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-800">Mata Pelajaran Saya</h2>
+                    <p className="text-sm text-gray-500 mt-1">Daftar mata pelajaran yang dapat Anda ajarkan</p>
+                  </div>
+                  <div className="bg-purple-100 px-4 py-2 rounded-lg">
+                    <p className="text-sm font-semibold text-purple-600">{mentorMataPelajaran.length} Mata Pelajaran</p>
+                  </div>
+                </div>
+
+                {loadingMataPelajaran ? (
+                  <div className="flex justify-center items-center h-64">
+                    <div className="animate-pulse flex flex-col items-center">
+                      <div className="w-12 h-12 bg-purple-200 rounded-full mb-4"></div>
+                      <p className="text-gray-500">Memuat mata pelajaran...</p>
+                    </div>
+                  </div>
+                ) : mentorMataPelajaran.length === 0 ? (
+                  <div className="text-center py-12">
+                    <svg className="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    <h3 className="mt-2 text-lg font-medium text-gray-900">Belum ada mata pelajaran</h3>
+                    <p className="mt-1 text-sm text-gray-500">Tambahkan mata pelajaran yang dapat Anda ajarkan.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {mentorMataPelajaran.map((mp) => (
+                      <div key={mp.id} className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-4 hover:shadow-md transition-shadow duration-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <div className="bg-purple-100 p-2 rounded-lg mr-3">
+                              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                              </svg>
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-gray-800">{mp.mata_pelajaran_nama || mp.nama}</h3>
+                              <p className="text-sm text-gray-500">Mata Pelajaran</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveMataPelajaran(mp.id)}
+                            className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50 transition-colors duration-200"
+                            title="Hapus mata pelajaran"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Card>
           </div>
         )}
 

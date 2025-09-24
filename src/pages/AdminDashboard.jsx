@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import api from '../api/axios';
+import api from '../config/api';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import PageContainer from '../components/PageContainer';
@@ -24,6 +24,7 @@ const TABS = [
   { key: 'availability', label: 'Ketersediaan', icon: ClockIcon, color: 'from-indigo-500 to-purple-600' },
   { key: 'silabus', label: 'Silabus', icon: BookOpenIcon, color: 'from-cyan-500 to-sky-600' },
   { key: 'history', label: 'History Materi', icon: ClipboardDocumentIcon, color: 'from-emerald-500 to-teal-600' },
+  { key: 'mentor-approval', label: 'Mentor Approval', icon: AcademicCapIcon, color: 'from-orange-500 to-red-600' },
   { key: 'notifikasi', label: 'Notifikasi', icon: BellIcon, color: 'from-pink-500 to-rose-600' },
   { key: 'users', label: 'Pengguna', icon: UserGroupIcon, color: 'from-green-500 to-teal-600' },
   { key: 'pengumuman', label: 'Pengumuman', icon: MegaphoneIcon, color: 'from-purple-500 to-pink-600' },
@@ -210,16 +211,69 @@ export default function AdminDashboard({ user, onLogout }) {
     upcoming_sessions: 0,
     pending_sessions: 0
   });
+  const [pendingMentors, setPendingMentors] = useState([]);
+  const [loadingPendingMentors, setLoadingPendingMentors] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [selectedMentorToReject, setSelectedMentorToReject] = useState(null);
 
   useEffect(() => {
-    api.get('/admin/current-week').then(res => setCurrentWeek(res.data.weekNumber));
-    api.get('/admin/stats').then(res => setStats(res.data));
-    api.get('/jadwal-sesi/admin-stats').then(res => setSessionStats(res.data));
+    const token = localStorage.getItem('token');
+    console.log('🔑 [DASHBOARD] Token:', token ? token.substring(0, 20) + '...' : 'none');
+    if (!token) {
+      console.warn('⚠️ [DASHBOARD] No token found, redirecting to login...');
+      window.location.href = '/login';
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        console.log('🔍 [DASHBOARD] Fetching initial data...');
+        const [
+          currentWeekRes,
+          statsRes,
+          sessionStatsRes
+        ] = await Promise.all([
+          api.get('/admin/current-week'),
+          api.get('/admin/stats'),
+          api.get('/jadwal-sesi/admin-stats')
+        ]);
+        
+        setCurrentWeek(currentWeekRes.data.weekNumber);
+        setStats(statsRes.data);
+        setSessionStats(sessionStatsRes.data);
+        
+        console.log('✅ [DASHBOARD] Initial data fetched successfully');
+      } catch (error) {
+        console.error('❌ [DASHBOARD] Error fetching initial data:', error);
+        if (error.response?.status === 401) {
+          console.warn('⚠️ [DASHBOARD] Unauthorized, redirecting to login...');
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+        }
+      }
+    };
+    
+    fetchData();
   }, []);
 
   useEffect(() => {
+    const fetchAllData = async () => {
     setLoading(true);
-    Promise.all([
+      try {
+        console.log('🔍 [DASHBOARD] Fetching all data...');
+        const [
+          kelasRes,
+          mentorRes,
+          jadwalRes,
+          permintaanRes,
+          mapelRes,
+          usersRes,
+          pengumumanRes,
+          silabusRes,
+          chatRes,
+          historyRes
+        ] = await Promise.all([
       api.get('/kelas'),
       api.get('/mentors'),
       api.get('/jadwal-sesi'),
@@ -230,30 +284,53 @@ export default function AdminDashboard({ user, onLogout }) {
       api.get('/silabus'),
       api.get('/chat/users'),
       api.get('/history-materi'),
-    ]).then(([kelasRes, mentorRes, jadwalRes, permintaanRes, mapelRes, usersRes, pengumumanRes, silabusRes, chatRes, historyRes]) => {
-      setKelas(kelasRes.data);
-      setMapel(mapelRes.data);
-      setConversations(historyRes.data); // Use history data for history tab
-      setUsers(usersRes.data);
-      setPengumuman(pengumumanRes.data);
-      setSilabus(silabusRes.data);
+        ]);
+
+        console.log('✅ [DASHBOARD] All data fetched successfully');
+        
+        // Process kelas data
       const kelasObj = {};
       kelasRes.data.forEach(k => { kelasObj[k.id] = k.nama; });
+        setKelas(kelasRes.data);
       setKelasMap(kelasObj);
+        console.log('✅ [DASHBOARD] Kelas data processed:', kelasRes.data.length, 'items');
+
+        // Process mentor data
       const mentorObj = {};
       mentorRes.data.forEach(m => { mentorObj[m.id] = m.nama; });
+        setMentors(mentorRes.data);
       setMentorMap(mentorObj);
+        console.log('✅ [DASHBOARD] Mentor data processed:', mentorRes.data.length, 'items');
+
+        // Process mapel data
       const mapelObj = {};
       mapelRes.data.forEach(mp => { mapelObj[mp.id] = mp.nama; });
+        setMapel(mapelRes.data);
       setMapelMap(mapelObj);
-      setMentors(mentorRes.data);
+        console.log('✅ [DASHBOARD] Mapel data processed:', mapelRes.data.length, 'items');
+
+        // Set other data
       setJadwal(jadwalRes.data);
       setPermintaan(permintaanRes.data);
+        setUsers(usersRes.data);
+        setPengumuman(pengumumanRes.data);
+        setSilabus(silabusRes.data);
+        setConversations(historyRes.data);
+
+        console.log('✅ [DASHBOARD] All data processed and states updated');
+      } catch (error) {
+        console.error('❌ [DASHBOARD] Error fetching all data:', error);
+        if (error.response?.status === 401) {
+          console.warn('⚠️ [DASHBOARD] Unauthorized, redirecting to login...');
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+        }
+      } finally {
       setLoading(false);
-    }).catch(err => {
-      console.error("Error fetching initial data:", err);
-      setLoading(false);
-    });
+      }
+    };
+
+    fetchAllData();
   }, []);
 
   useEffect(() => {
@@ -282,6 +359,13 @@ export default function AdminDashboard({ user, onLogout }) {
       }
     }
   }, [mentorOptions, selectedMentor]);
+
+  // Fetch pending mentors when mentor-approval tab is active
+  useEffect(() => {
+    if (tab === 'mentor-approval') {
+      fetchPendingMentors();
+    }
+  }, [tab]);
 
   useEffect(() => {
     if (!chatTarget) return;
@@ -409,6 +493,132 @@ export default function AdminDashboard({ user, onLogout }) {
     }
   };
 
+  // Mentor Approval Functions
+  const fetchPendingMentors = async () => {
+    console.log('\n👑 ====== FRONTEND FETCH PENDING MENTORS ======');
+    setLoadingPendingMentors(true);
+    try {
+      console.log('🔍 Fetching pending mentors...');
+      const response = await api.get('/admin/pending-mentors');
+      console.log('✅ Response received:', response.data);
+      console.log('📊 Pending mentors count:', response.data.length);
+      console.log('📋 Pending mentors data:', response.data);
+      
+      setPendingMentors(response.data);
+      
+      // Update stats with pending mentors count
+      setStats(prev => ({
+        ...prev,
+        pendingMentors: response.data.length
+      }));
+      
+    } catch (error) {
+      console.error('❌ Error fetching pending mentors:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      
+      // Set empty array on error
+      setPendingMentors([]);
+      
+      // Show user-friendly error message
+      if (error.response?.status === 403) {
+        console.error('❌ Access denied - not admin');
+      } else if (error.response?.status === 500) {
+        console.error('❌ Server error - check backend logs');
+      }
+    } finally {
+      setLoadingPendingMentors(false);
+      console.log('👑 ====== FETCH PENDING MENTORS END ======\n');
+    }
+  };
+
+  const handleApproveMentor = async (mentorId) => {
+    console.log('\n✅ ====== FRONTEND APPROVE MENTOR ======');
+    console.log('🔍 Approving mentor ID:', mentorId);
+    
+    try {
+      const response = await api.put(`/admin/mentors/${mentorId}/approve`);
+      console.log('✅ Approve response:', response.data);
+      
+      // Remove from pending list
+      setPendingMentors(p => p.filter(m => m.id !== mentorId));
+      
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        total_mentor: prev.total_mentor + 1,
+        pendingMentors: prev.pendingMentors - 1
+      }));
+      
+      console.log('✅ Mentor approved successfully');
+      alert('Mentor berhasil disetujui!');
+      
+      // Refresh pending mentors list
+      fetchPendingMentors();
+      
+    } catch (error) {
+      console.error('❌ Error approving mentor:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      alert('Gagal menyetujui mentor: ' + (error.response?.data?.error || error.message));
+    }
+    
+    console.log('✅ ====== APPROVE MENTOR END ======\n');
+  };
+
+  const handleRejectMentor = async (mentorId, reason) => {
+    console.log('\n❌ ====== FRONTEND REJECT MENTOR ======');
+    console.log('🔍 Rejecting mentor ID:', mentorId);
+    console.log('🔍 Rejection reason:', reason);
+    
+    try {
+      const response = await api.put(`/admin/mentors/${mentorId}/reject`, { reason });
+      console.log('✅ Reject response:', response.data);
+      
+      // Remove from pending list
+      setPendingMentors(p => p.filter(m => m.id !== mentorId));
+      
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        pendingMentors: prev.pendingMentors - 1
+      }));
+      
+      // Close modal
+      setShowRejectModal(false);
+      setRejectReason('');
+      setSelectedMentorToReject(null);
+      
+      console.log('✅ Mentor rejected successfully');
+      alert('Mentor berhasil ditolak!');
+      
+      // Refresh pending mentors list
+      fetchPendingMentors();
+      
+    } catch (error) {
+      console.error('❌ Error rejecting mentor:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      alert('Gagal menolak mentor: ' + (error.response?.data?.error || error.message));
+    }
+    
+    console.log('❌ ====== REJECT MENTOR END ======\n');
+  };
+
+  const openRejectModal = (mentor) => {
+    setSelectedMentorToReject(mentor);
+    setShowRejectModal(true);
+  };
+
   const StatCard = ({ icon: Icon, title, value, color }) => (
     <motion.div 
       whileHover={{ y: -5 }}
@@ -468,6 +678,14 @@ export default function AdminDashboard({ user, onLogout }) {
                 title="Total Mentor" 
                 value={stats.total_mentor} 
                 color="from-green-500 to-teal-600" 
+              />
+            </motion.div>
+            <motion.div variants={fadeIn}>
+              <StatCard 
+                icon={ClockIcon} 
+                title="Mentor Pending" 
+                value={stats.pendingMentors || 0} 
+                color="from-orange-500 to-red-600" 
               />
             </motion.div>
             <motion.div variants={fadeIn}>
@@ -1225,6 +1443,105 @@ export default function AdminDashboard({ user, onLogout }) {
                      </div>
                    </Card>
                  )}
+
+                 {tab === 'mentor-approval' && (
+                   <Card className="shadow-lg rounded-xl overflow-hidden border-0 bg-white/80 backdrop-blur-sm">
+                     <div className="bg-gradient-to-r from-orange-600 to-red-600 px-6 py-4">
+                       <div className="flex items-center justify-between">
+                         <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                           <AcademicCapIcon className="h-6 w-6" />
+                           Mentor Approval
+                         </h2>
+                         <div className="flex gap-2">
+                           <button
+                             onClick={fetchPendingMentors}
+                             className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg text-sm transition-colors"
+                             title="Refresh pending mentors"
+                           >
+                             🔄 Refresh
+                           </button>
+                           <button
+                             onClick={async () => {
+                               try {
+                                 const response = await api.get('/debug/all-mentors');
+                                 console.log('🔍 Debug all mentors:', response.data);
+                                 alert(`Found ${response.data.count} mentors in database. Check console for details.`);
+                               } catch (error) {
+                                 console.error('Debug error:', error);
+                                 alert('Debug failed: ' + error.message);
+                               }
+                             }}
+                             className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg text-sm transition-colors"
+                             title="Debug all mentors"
+                           >
+                             🔍 Debug
+                           </button>
+                         </div>
+                       </div>
+                     </div>
+                     <div className="p-6">
+                       {loadingPendingMentors ? (
+                         <div className="flex justify-center items-center h-64 bg-white/50 rounded-xl backdrop-blur-sm">
+                           <div className="animate-pulse flex flex-col items-center">
+                             <div className="w-12 h-12 bg-gradient-to-r from-orange-100 to-red-100 rounded-full mb-4 flex items-center justify-center">
+                               <AcademicCapIcon className="h-6 w-6 text-orange-500" />
+                             </div>
+                             <p className="text-gray-500">Memuat data mentor...</p>
+                           </div>
+                         </div>
+                       ) : pendingMentors.length === 0 ? (
+                         <div className="text-center py-12 bg-white/50 rounded-lg backdrop-blur-sm">
+                           <AcademicCapIcon className="mx-auto h-12 w-12 text-gray-400" />
+                           <h3 className="mt-2 text-lg font-medium text-gray-900">Tidak ada mentor yang menunggu persetujuan</h3>
+                           <p className="mt-1 text-sm text-gray-500">Semua mentor sudah diproses atau belum ada yang mendaftar.</p>
+                         </div>
+                       ) : (
+                         <div className="space-y-4">
+                           {pendingMentors.map((mentor) => (
+                             <div key={mentor.id} className="bg-white/80 p-6 rounded-xl shadow-sm border border-gray-200/50 hover:shadow-md transition-shadow">
+                               <div className="flex items-center justify-between">
+                                 <div className="flex items-center space-x-4">
+                                   <div className="bg-gradient-to-r from-orange-100 to-red-100 p-3 rounded-full">
+                                     <AcademicCapIcon className="h-8 w-8 text-orange-600" />
+                                   </div>
+                                   <div>
+                                     <h3 className="text-lg font-semibold text-gray-900">{mentor.nama}</h3>
+                                     <p className="text-sm text-gray-500">{mentor.email}</p>
+                                     <p className="text-xs text-gray-400">
+                                       Mendaftar: {new Date(mentor.created_at).toLocaleDateString('id-ID', {
+                                         year: 'numeric',
+                                         month: 'long',
+                                         day: 'numeric',
+                                         hour: '2-digit',
+                                         minute: '2-digit'
+                                       })}
+                                     </p>
+                                   </div>
+                                 </div>
+                                 <div className="flex space-x-3">
+                                   <Button
+                                     onClick={() => handleApproveMentor(mentor.id)}
+                                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                                   >
+                                     <CheckCircleIcon className="h-5 w-5" />
+                                     <span>Setujui</span>
+                                   </Button>
+                                   <Button
+                                     onClick={() => openRejectModal(mentor)}
+                                     className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                                   >
+                                     <XCircleIcon className="h-5 w-5" />
+                                     <span>Tolak</span>
+                                   </Button>
+                                 </div>
+                               </div>
+                             </div>
+                           ))}
+                         </div>
+                       )}
+                     </div>
+                   </Card>
+                 )}
                  
                  {tab === 'analytics' && (
                    <Card className="shadow-lg rounded-xl overflow-hidden border-0 bg-white/80 backdrop-blur-sm">
@@ -1276,6 +1593,51 @@ export default function AdminDashboard({ user, onLogout }) {
 
       {/* Chat Modal */}
       <Chat isOpen={showChat} onClose={() => setShowChat(false)} />
+
+      {/* Reject Mentor Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Tolak Mentor</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Apakah Anda yakin ingin menolak mentor <strong>{selectedMentorToReject?.nama}</strong>?
+              </p>
+              <div className="mb-4">
+                <label htmlFor="rejectReason" className="block text-sm font-medium text-gray-700 mb-2">
+                  Alasan Penolakan (Opsional)
+                </label>
+                <textarea
+                  id="rejectReason"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Masukkan alasan penolakan..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end space-x-3">
+                <Button
+                  onClick={() => {
+                    setShowRejectModal(false);
+                    setRejectReason('');
+                    setSelectedMentorToReject(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md"
+                >
+                  Batal
+                </Button>
+                <Button
+                  onClick={() => handleRejectMentor(selectedMentorToReject.id, rejectReason)}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
+                >
+                  Tolak Mentor
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

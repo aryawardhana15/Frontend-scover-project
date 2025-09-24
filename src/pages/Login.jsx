@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
-import api from '../api/axios';
+import api from '../config/api';
 import { Eye, EyeOff, Mail, Lock, User, BookOpen, GraduationCap, Users, Award, Star, Brain } from 'lucide-react';
 
 export default function Login({ onLogin }) {
@@ -15,6 +15,7 @@ export default function Login({ onLogin }) {
     e.preventDefault();
     setError('');
     try {
+      console.log('[Login] role:', role, 'email:', email);
       let res;
       if (role === 'mentor') {
         res = await api.post('/mentors/login', { email, password });
@@ -23,11 +24,37 @@ export default function Login({ onLogin }) {
       } else {
         res = await api.post('/users/login', { email, password });
       }
-      console.log('User login response:', res.data);
-      onLogin(res.data);
+      console.log('\n🟢 ====== LOGIN SUCCESS ======');
+      console.log('✅ [LOGIN] Response status:', res.status);
+      console.log('✅ [LOGIN] Response headers:', res.headers);
+      console.log('✅ [LOGIN] Response data:', res.data);
+      
+      // Save token
       if (res.data.token) {
+        console.log('\n🔑 [LOGIN] Token details:');
+        console.log('- Full token:', res.data.token);
+        console.log('- Token length:', res.data.token.length);
+        console.log('- Token type:', typeof res.data.token);
+        
+        // Clear any existing token
+        localStorage.removeItem('token');
+        console.log('🗑️ [LOGIN] Cleared existing token');
+        
+        // Save new token
         localStorage.setItem('token', res.data.token);
+        const savedToken = localStorage.getItem('token');
+        console.log('\n✅ [LOGIN] Token verification:');
+        console.log('- Saved successfully:', !!savedToken);
+        console.log('- Saved token matches:', savedToken === res.data.token);
+        console.log('- Saved token:', savedToken.substring(0, 20) + '...');
+      } else {
+        console.error('❌ [LOGIN] No token in response data');
+        console.error('❌ [LOGIN] Response data keys:', Object.keys(res.data));
       }
+      
+      console.log('\n👤 [LOGIN] User data:', res.data);
+      onLogin(res.data);
+      console.log('🟢 ====== LOGIN END ======\n');
       
       // Redirect to appropriate dashboard
       if (res.data.role === 'admin') {
@@ -38,7 +65,15 @@ export default function Login({ onLogin }) {
         navigate('/user');
       }
     } catch (err) {
-      setError('Login gagal. Cek email/password.');
+      console.error('[Login] error object:', err);
+      if (err.response) {
+        console.error('[Login] server responded:', err.response.status, err.response.data);
+      } else if (err.request) {
+        console.error('[Login] no response, request was:', err.request);
+      } else {
+        console.error('[Login] setup error:', err.message);
+      }
+      setError(err.response?.data?.error || 'Login gagal. Cek email/password.');
     }
   };
 
