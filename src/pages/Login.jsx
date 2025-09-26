@@ -1,230 +1,294 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Button from '../components/Button';
-import api from '../config/api';
 import { Eye, EyeOff, Mail, Lock, User, BookOpen, GraduationCap, Users, Award, Star, Brain } from 'lucide-react';
 
 export default function Login({ onLogin }) {
-  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('admin');
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
+    
     try {
       console.log('[Login] role:', role, 'email:', email);
-      let res;
-      if (role === 'mentor') {
-        res = await api.post('/mentors/login', { email, password });
-      } else if (role === 'admin') {
-        res = await api.post('/admin/login', { email, password });
-      } else {
-        res = await api.post('/users/login', { email, password });
-      }
-      console.log('\n🟢 ====== LOGIN SUCCESS ======');
-      console.log('✅ [LOGIN] Response status:', res.status);
-      console.log('✅ [LOGIN] Response headers:', res.headers);
-      console.log('✅ [LOGIN] Response data:', res.data);
       
-      // Save token
-      if (res.data.token) {
-        console.log('\n🔑 [LOGIN] Token details:');
-        console.log('- Full token:', res.data.token);
-        console.log('- Token length:', res.data.token.length);
-        console.log('- Token type:', typeof res.data.token);
-        
-        // Clear any existing token
+      // Simulate API call with timeout
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Mock success response
+      const mockResponse = {
+        data: {
+          token: 'mock-jwt-token-' + Date.now(),
+          role: role,
+          user: { email, role }
+        }
+      };
+      
+      console.log('✅ [LOGIN] Mock Response:', mockResponse.data);
+      
+      // Save token to localStorage
+      if (mockResponse.data.token) {
         localStorage.removeItem('token');
-        console.log('🗑️ [LOGIN] Cleared existing token');
-        
-        // Save new token
-        localStorage.setItem('token', res.data.token);
-        const savedToken = localStorage.getItem('token');
-        console.log('\n✅ [LOGIN] Token verification:');
-        console.log('- Saved successfully:', !!savedToken);
-        console.log('- Saved token matches:', savedToken === res.data.token);
-        console.log('- Saved token:', savedToken.substring(0, 20) + '...');
-      } else {
-        console.error('❌ [LOGIN] No token in response data');
-        console.error('❌ [LOGIN] Response data keys:', Object.keys(res.data));
+        localStorage.setItem('token', mockResponse.data.token);
       }
       
-      console.log('\n👤 [LOGIN] User data:', res.data);
-      onLogin(res.data);
-      console.log('🟢 ====== LOGIN END ======\n');
+      onLogin && onLogin(mockResponse.data);
       
-      // Redirect to appropriate dashboard
-      if (res.data.role === 'admin') {
-        navigate('/admin');
-      } else if (res.data.role === 'mentor') {
-        navigate('/mentor');
-      } else if (res.data.role === 'user') {
-        navigate('/user');
-      }
+      // Simulate navigation
+      console.log(`🚀 Redirecting to ${role} dashboard...`);
+      
     } catch (err) {
-      console.error('[Login] error object:', err);
-      if (err.response) {
-        console.error('[Login] server responded:', err.response.status, err.response.data);
-      } else if (err.request) {
-        console.error('[Login] no response, request was:', err.request);
-      } else {
-        console.error('[Login] setup error:', err.message);
-      }
-      setError(err.response?.data?.error || 'Login gagal. Cek email/password.');
+      console.error('[Login] error:', err);
+      setError('Login gagal. Periksa email/password Anda.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const roleData = {
     admin: {
       icon: <Award className="w-6 h-6" />,
-      color: "from-blue-600 to-blue-800"
+      gradient: "from-cyan-400 to-blue-600",
+      glow: "shadow-cyan-500/25"
     },
     mentor: {
       icon: <GraduationCap className="w-6 h-6" />,
-      color: "from-blue-500 to-indigo-600"
+      gradient: "from-purple-400 to-indigo-600", 
+      glow: "shadow-purple-500/25"
     },
     user: {
       icon: <BookOpen className="w-6 h-6" />,
-      color: "from-blue-400 to-cyan-500"
+      gradient: "from-emerald-400 to-teal-600",
+      glow: "shadow-emerald-500/25"
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 relative overflow-hidden flex items-center justify-center">
-      {/* Educational background elements */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-10 left-10 text-blue-300">
-          <BookOpen className="w-24 h-24 transform rotate-12" />
-        </div>
-        <div className="absolute top-32 right-20 text-blue-300">
-          <GraduationCap className="w-20 h-20 transform -rotate-12" />
-        </div>
-        <div className="absolute bottom-32 left-20 text-blue-300">
-          <Brain className="w-28 h-28 transform rotate-45" />
-        </div>
-        <div className="absolute bottom-20 right-32 text-blue-300">
-          <Users className="w-16 h-16 transform -rotate-45" />
-        </div>
-        <div className="absolute top-1/2 left-1/4 text-blue-300">
-          <Star className="w-12 h-12 animate-pulse" />
-        </div>
-        <div className="absolute top-1/3 right-1/3 text-blue-300">
-          <Star className="w-10 h-10 animate-pulse delay-500" />
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 relative overflow-hidden flex items-center justify-center">
+      {/* Animated Background Orbs */}
+      <div className="absolute inset-0">
+        <div className="absolute top-20 left-20 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute bottom-20 left-40 w-72 h-72 bg-pink-500/20 rounded-full blur-3xl animate-pulse delay-2000"></div>
+        <div className="absolute bottom-40 right-40 w-64 h-64 bg-cyan-500/20 rounded-full blur-3xl animate-pulse delay-3000"></div>
       </div>
 
-      {/* Floating particles */}
+      {/* Floating Particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(8)].map((_, i) => {
-          const icons = [BookOpen, GraduationCap, Brain, Star];
+        {[...Array(15)].map((_, i) => {
+          const icons = [BookOpen, GraduationCap, Brain, Star, Users, Award];
           const Icon = icons[i % icons.length];
           return (
             <div
               key={i}
-              className="absolute animate-bounce opacity-10 text-blue-400"
+              className="absolute animate-float opacity-10 text-white/30"
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
                 animationDelay: `${Math.random() * 5}s`,
-                animationDuration: `${4 + Math.random() * 3}s`
+                animationDuration: `${6 + Math.random() * 4}s`
               }}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-5 h-5" />
             </div>
           );
         })}
       </div>
 
-      {/* Main Form - upgraded styling but same structure */}
-      <form onSubmit={handleSubmit} className="bg-white/90 backdrop-blur-xl p-10 rounded-3xl shadow-2xl w-96 space-y-7 border border-blue-200 relative z-10 transform hover:scale-[1.01] transition-transform duration-300">
-        {/* Decorative header */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 rounded-t-3xl"></div>
-        
-        {/* Header with educational branding */}
-        <div className="text-center mb-6">
-          <div className="flex justify-center items-center mb-4">
-            <div className={`p-3 rounded-2xl bg-gradient-to-r ${roleData[role].color} text-white shadow-lg transform hover:scale-110 transition-all duration-300`}>
-              {roleData[role].icon}
-            </div>
-          </div>
-          <h2 className="text-4xl font-extrabold text-center text-blue-800 mb-2">Login</h2>
-          <p className="text-blue-600 text-sm">EduPortal - Platform Pembelajaran</p>
-        </div>
-
-        {/* Error message - same logic, better styling */}
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-400 text-red-700 p-3 rounded-lg text-center mb-4 animate-pulse">
-            <div className="flex items-center justify-center">
-              <span className="text-red-400 mr-2">⚠️</span>
-              {error}
-            </div>
-          </div>
-        )}
-
-        {/* Email field - same functionality, enhanced styling */}
-        <div>
-          <label className="block text-gray-700 mb-1 font-medium text-sm flex items-center">
-            <Mail className="w-4 h-4 mr-2 text-blue-500" />
-            Email
-          </label>
-          <div className="relative">
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-3 focus:ring-blue-300 transition duration-200 bg-gray-50 hover:bg-white pl-4 text-gray-800"
-              required
+      {/* Neural Network Lines Background */}
+      <div className="absolute inset-0 opacity-10">
+        <svg className="w-full h-full" viewBox="0 0 1000 1000">
+          <defs>
+            <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.3" />
+              <stop offset="50%" stopColor="#8b5cf6" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#ec4899" stopOpacity="0.3" />
+            </linearGradient>
+          </defs>
+          {[...Array(8)].map((_, i) => (
+            <line
+              key={i}
+              x1={Math.random() * 1000}
+              y1={Math.random() * 1000}
+              x2={Math.random() * 1000}
+              y2={Math.random() * 1000}
+              stroke="url(#lineGradient)"
+              strokeWidth="1"
+              className="animate-pulse"
+              style={{ animationDelay: `${i * 0.5}s` }}
             />
+          ))}
+        </svg>
+      </div>
+
+      {/* Main Login Form */}
+      <div className="relative z-10 w-full max-w-md mx-4">
+        <div className="bg-white/10 backdrop-blur-xl p-8 md:p-10 rounded-3xl border border-white/20 shadow-2xl space-y-6 transform hover:scale-[1.02] transition-all duration-300 hover:shadow-3xl">
+          
+          {/* Holographic Header Effect */}
+          <div className="absolute -top-1 -left-1 -right-1 h-1 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 rounded-t-3xl opacity-80 blur-sm"></div>
+          <div className="absolute -top-0.5 -left-0.5 -right-0.5 h-0.5 bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 rounded-t-3xl"></div>
+          
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="flex justify-center items-center mb-6">
+              <div className={`p-4 rounded-3xl bg-gradient-to-r ${roleData[role].gradient} text-white shadow-2xl ${roleData[role].glow} transform hover:scale-110 transition-all duration-300 relative`}>
+                {roleData[role].icon}
+                {/* Glow effect */}
+                <div className={`absolute inset-0 rounded-3xl bg-gradient-to-r ${roleData[role].gradient} opacity-20 blur-xl`}></div>
+              </div>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-black text-white mb-3 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+              Masuk
+            </h2>
+            <p className="text-white/70 text-sm font-medium tracking-wide">
+              MYSCOVER • Portal Pembelajaran
+            </p>
+          </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="bg-red-500/20 backdrop-blur-md border border-red-400/30 text-red-200 p-4 rounded-2xl text-center mb-6 animate-shake">
+              <div className="flex items-center justify-center space-x-2">
+                <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                <span className="font-medium">{error}</span>
+                <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse delay-500"></div>
+              </div>
+            </div>
+          )}
+
+          {/* Email Field */}
+          <div className="group">
+            <label className="block text-white/90 mb-2 font-bold text-sm flex items-center space-x-2">
+              <Mail className="w-4 h-4 text-cyan-400" />
+              <span>ALAMAT EMAIL</span>
+            </label>
+            <div className="relative">
+              <input
+                type="email"
+                placeholder="Masukkan email Anda..."
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="w-full bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all duration-300 text-white placeholder-white/50 group-hover:bg-white/15"
+                required
+              />
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-500/0 via-cyan-500/5 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+            </div>
+          </div>
+
+          {/* Password Field */}
+          <div className="group">
+            <label className="block text-white/90 mb-2 font-bold text-sm flex items-center space-x-2">
+              <Lock className="w-4 h-4 text-purple-400" />
+              <span>KATA SANDI</span>
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Masukkan kata sandi Anda..."
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="w-full bg-white/10 backdrop-blur-md border border-white/20 p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-purple-400/50 transition-all duration-300 text-white placeholder-white/50 group-hover:bg-white/15"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white transition-colors duration-200"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/0 via-purple-500/5 to-purple-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+            </div>
+          </div>
+
+          {/* Role Selector */}
+          <div className="group">
+            <label className="block text-white/90 mb-2 font-bold text-sm flex items-center space-x-2">
+              <User className="w-4 h-4 text-emerald-400" />
+              <span>TINGKAT AKSES</span>
+            </label>
+            <div className="relative">
+              <select 
+                value={role} 
+                onChange={e => setRole(e.target.value)} 
+                className="w-full bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-400/50 transition-all duration-300 text-white cursor-pointer appearance-none group-hover:bg-white/15"
+              >
+                <option value="admin" className="bg-gray-800 text-white">🛡️ Administrator</option>
+                <option value="mentor" className="bg-gray-800 text-white">👨‍🏫 Mentor</option>
+                <option value="user" className="bg-gray-800 text-white">🎓 Siswa</option>
+              </select>
+              <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-white/60"></div>
+              </div>
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-emerald-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+            <button
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className={`w-full bg-gradient-to-r ${roleData[role].gradient} text-white p-4 rounded-2xl font-black text-lg transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-white/30 shadow-2xl ${roleData[role].glow} relative overflow-hidden ${isLoading ? 'opacity-80 cursor-not-allowed' : 'hover:shadow-3xl'}`}
+          >
+            {/* Button glow effect */}
+            <div className={`absolute inset-0 bg-gradient-to-r ${roleData[role].gradient} opacity-0 hover:opacity-20 blur-xl transition-opacity duration-300`}></div>
+            
+            {isLoading ? (
+              <div className="flex items-center justify-center space-x-3">
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <span>Memproses...</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center space-x-2">
+                <span>MASUK</span>
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+              </div>
+            )}
+          </button>
+
+          {/* Futuristic Quote */}
+          <div className="bg-gradient-to-r from-white/5 to-white/10 backdrop-blur-md border-l-4 border-cyan-400 p-4 rounded-2xl mt-6">
+            <div className="flex items-center space-x-3">
+              <Brain className="w-5 h-5 text-cyan-400 animate-pulse" />
+              <p className="text-white/80 text-sm font-medium italic">
+                "Masa depan milik mereka yang belajar, melupakan, dan belajar kembali."
+              </p>
+            </div>
+          </div>
+
+          {/* Version Info */}
+          <div className="text-center mt-6">
+            <p className="text-white/40 text-xs font-mono tracking-wider">
+              MYSCOVER v3.0.1 • Platform Pembelajaran
+            </p>
           </div>
         </div>
+      </div>
 
-        {/* Password field - same functionality, added show/hide feature */}
-        <div>
-          <label className="block text-gray-700 mb-1 font-medium text-sm flex items-center">
-            <Lock className="w-4 h-4 mr-2 text-blue-500" />
-            Password
-          </label>
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-3 focus:ring-blue-300 transition duration-200 bg-gray-50 hover:bg-white text-gray-800"
-            required
-          />
-        </div>
-
-        {/* Role selector - same functionality, better styling */}
-        <div>
-          <label className="block text-gray-700 mb-1 font-medium text-sm flex items-center">
-            <User className="w-4 h-4 mr-2 text-blue-500" />
-            Role
-          </label>
-          <select 
-            value={role} 
-            onChange={e => setRole(e.target.value)} 
-            className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-3 focus:ring-blue-300 transition duration-200 bg-gray-50 hover:bg-white text-gray-800 cursor-pointer"
-          >
-            <option value="admin">Admin</option>
-            <option value="mentor">Mentor</option>
-            <option value="user">Siswa</option>
-          </select>
-        </div>
-
-        {/* Submit button - same functionality, enhanced styling */}
-        <Button type="submit" size="lg" className="w-full">Login</Button>
-
-        {/* Educational quote */}
-        <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded-lg mt-4">
-          <p className="text-blue-800 text-xs italic text-center">
-            "Belajar adalah investasi terbaik untuk masa depan"
-          </p>
-        </div>
-      </form>
+      {/* Custom Animations */}
+      <style jsx>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.1; }
+          50% { transform: translateY(-20px) rotate(180deg); opacity: 0.3; }
+        }
+        .animate-float {
+          animation: float 8s ease-in-out infinite;
+        }
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+          20%, 40%, 60%, 80% { transform: translateX(2px); }
+        }
+        .animate-shake {
+          animation: shake 0.5s ease-in-out;
+        }
+      `}</style>
     </div>
   );
 }

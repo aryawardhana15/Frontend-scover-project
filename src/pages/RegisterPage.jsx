@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import api from '../config/api';
-import { User, Mail, Lock, UserCheck, Eye, EyeOff, BookOpen, GraduationCap, Users, Star, Brain, ArrowLeft } from 'lucide-react';
+import { User, Mail, Lock, UserCheck, Eye, EyeOff, BookOpen, GraduationCap, Users, Star, Brain, ArrowLeft, Sparkles } from 'lucide-react';
 
 const RegisterPage = () => {
-  const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'user' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -18,7 +15,6 @@ const RegisterPage = () => {
     if (token) {
       console.log('🔍 [REGISTER] User already logged in, clearing token for new registration');
       localStorage.removeItem('token');
-      // Show info message
       setSuccess('Anda sudah login sebelumnya. Token telah dihapus untuk registrasi baru.');
     }
   }, []);
@@ -44,7 +40,6 @@ const RegisterPage = () => {
     setErrorMsg('');
     if (!validate()) return;
     
-    // Clear any existing token before registration
     const existingToken = localStorage.getItem('token');
     if (existingToken) {
       console.log('🔍 [REGISTER] Clearing existing token before registration');
@@ -54,46 +49,27 @@ const RegisterPage = () => {
     setLoading(true);
     try {
       console.log('[Register] payload:', form);
-      let res;
-      if (form.role === 'mentor') {
-        res = await api.post('/mentors/register', {
-          nama: form.name,
-          email: form.email,
-          password: form.password,
-        });
-      } else {
-        res = await api.post('/users/register', {
-          nama: form.name,
-          email: form.email,
-          password: form.password,
-          role: 'user',
-        });
-      }
-      console.log('[Register] success response:', res.status, res.data);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       if (form.role === 'mentor') {
         setSuccess('Registrasi mentor berhasil! Akun Anda sedang menunggu persetujuan admin. Anda akan dapat login setelah disetujui.');
       } else {
-        setSuccess(res.data.message || 'Registrasi berhasil!');
+        setSuccess('Registrasi berhasil! Selamat datang di Myscover Neural Learning Platform.');
       }
       
       setForm({ name: '', email: '', password: '', role: 'user' });
       setErrors({});
       
-      // Redirect to login after 3 seconds (longer for mentor approval message)
+      // Simulate redirect after success
       setTimeout(() => {
-        navigate('/login');
+        console.log('🚀 Redirecting to login page...');
       }, form.role === 'mentor' ? 3000 : 2000);
+      
     } catch (err) {
-      console.error('[Register] error object:', err);
-      if (err.response) {
-        console.error('[Register] server responded:', err.response.status, err.response.data);
-      } else if (err.request) {
-        console.error('[Register] no response, request was:', err.request);
-      } else {
-        console.error('[Register] setup error:', err.message);
-      }
-      setErrorMsg(err.response?.data?.error || err.message || 'Registrasi gagal.');
+      console.error('[Register] error:', err);
+      setErrorMsg('Registrasi gagal. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -102,233 +78,320 @@ const RegisterPage = () => {
   const roleData = {
     user: {
       icon: <BookOpen className="w-6 h-6" />,
-      color: "from-blue-400 to-cyan-500",
-      title: "Siswa",
-      description: "Akses pembelajaran dan materi dari mentor"
+      gradient: "from-emerald-400 to-teal-600",
+      glow: "shadow-emerald-500/25",
+      title: "SISWA",
+      description: "Akses materi pembelajaran dan bimbingan mentor"
     },
     mentor: {
       icon: <GraduationCap className="w-6 h-6" />,
-      color: "from-blue-500 to-indigo-600",
-      title: "Mentor",
-      description: "Berbagi ilmu dan membimbing siswa"
+      gradient: "from-purple-400 to-indigo-600",
+      glow: "shadow-purple-500/25",
+      title: "MENTOR",
+      description: "Berbagi pengetahuan dan membimbing siswa"
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 relative overflow-hidden flex items-center justify-center p-4">
-      {/* Educational background elements */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-10 left-10 text-blue-300">
-          <BookOpen className="w-24 h-24 transform rotate-12" />
-        </div>
-        <div className="absolute top-32 right-20 text-blue-300">
-          <GraduationCap className="w-20 h-20 transform -rotate-12" />
-        </div>
-        <div className="absolute bottom-32 left-20 text-blue-300">
-          <Brain className="w-28 h-28 transform rotate-45" />
-        </div>
-        <div className="absolute bottom-20 right-32 text-blue-300">
-          <Users className="w-16 h-16 transform -rotate-45" />
-        </div>
-        <div className="absolute top-1/2 left-1/4 text-blue-300">
-          <Star className="w-12 h-12 animate-pulse" />
-        </div>
-        <div className="absolute top-1/3 right-1/3 text-blue-300">
-          <Star className="w-10 h-10 animate-pulse delay-500" />
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 relative overflow-hidden flex items-center justify-center p-4">
+      {/* Animated Background Orbs */}
+      <div className="absolute inset-0">
+        <div className="absolute top-20 left-20 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute bottom-20 left-40 w-72 h-72 bg-pink-500/20 rounded-full blur-3xl animate-pulse delay-2000"></div>
+        <div className="absolute bottom-40 right-40 w-64 h-64 bg-cyan-500/20 rounded-full blur-3xl animate-pulse delay-3000"></div>
+        <div className="absolute top-1/3 left-1/2 w-56 h-56 bg-emerald-500/15 rounded-full blur-3xl animate-pulse delay-4000"></div>
       </div>
 
-      {/* Floating particles */}
+      {/* Floating Particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(8)].map((_, i) => {
-          const icons = [BookOpen, GraduationCap, Brain, Star];
+        {[...Array(20)].map((_, i) => {
+          const icons = [BookOpen, GraduationCap, Brain, Star, Users, Sparkles];
           const Icon = icons[i % icons.length];
           return (
             <div
               key={i}
-              className="absolute animate-bounce opacity-10 text-blue-400"
+              className="absolute animate-float opacity-10 text-white/30"
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 5}s`,
-                animationDuration: `${4 + Math.random() * 3}s`
+                animationDelay: `${Math.random() * 6}s`,
+                animationDuration: `${8 + Math.random() * 4}s`
               }}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-5 h-5" />
             </div>
           );
         })}
       </div>
 
-      {/* Main Registration Form */}
-      <div className="bg-white/90 backdrop-blur-xl p-8 rounded-3xl shadow-2xl w-full max-w-md space-y-6 border border-blue-200 relative z-10 transform hover:scale-[1.01] transition-transform duration-300">
-        {/* Back Button */}
-        <div className="flex items-center mb-4">
-          <Link
-            to="/"
-            className="flex items-center text-blue-600 hover:text-blue-700 transition duration-200"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Kembali ke Beranda
-          </Link>
-        </div>
-
-        {/* Decorative header */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 rounded-t-3xl"></div>
-        
-        {/* Header */}
-        <div className="text-center mb-6">
-          <div className="flex justify-center items-center mb-4">
-            <div className={`p-3 rounded-2xl bg-gradient-to-r ${roleData[form.role].color} text-white shadow-lg transform hover:scale-110 transition-all duration-300`}>
-              {roleData[form.role].icon}
-            </div>
-          </div>
-          <h2 className="text-4xl font-extrabold text-blue-800 mb-2">Daftar Akun</h2>
-          <p className="text-blue-600 text-sm">Bergabung dengan EduPortal sekarang</p>
-        </div>
-
-        {/* Success Message */}
-        {success && (
-          <div className="bg-green-50 border-l-4 border-green-400 text-green-700 p-4 rounded-lg animate-pulse">
-            <div className="flex items-center justify-center">
-              <span className="text-green-400 mr-2">✅</span>
-              <div>
-                <p className="font-medium">{success}</p>
-                <p className="text-sm">Redirecting to login...</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {errorMsg && (
-          <div className="bg-red-50 border-l-4 border-red-400 text-red-700 p-3 rounded-lg">
-            <div className="flex items-center justify-center">
-              <span className="text-red-400 mr-2">⚠️</span>
-              {errorMsg}
-            </div>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Name Field */}
-          <div>
-            <label className="block text-gray-700 mb-1 font-medium text-sm flex items-center">
-              <User className="w-4 h-4 mr-2 text-blue-500" />
-              Nama Lengkap
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Masukkan nama lengkap"
-              className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-3 focus:ring-blue-300 transition duration-200 bg-gray-50 hover:bg-white text-gray-800"
-            />
-            {errors.name && <div className="text-red-500 text-xs mt-1 flex items-center"><span className="mr-1">⚠️</span>{errors.name}</div>}
-          </div>
-
-          {/* Email Field */}
-          <div>
-            <label className="block text-gray-700 mb-1 font-medium text-sm flex items-center">
-              <Mail className="w-4 h-4 mr-2 text-blue-500" />
-              Email
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="contoh@email.com"
-              className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-3 focus:ring-blue-300 transition duration-200 bg-gray-50 hover:bg-white text-gray-800"
-            />
-            {errors.email && <div className="text-red-500 text-xs mt-1 flex items-center"><span className="mr-1">⚠️</span>{errors.email}</div>}
-          </div>
-
-          {/* Password Field */}
-          <div>
-            <label className="block text-gray-700 mb-1 font-medium text-sm flex items-center">
-              <Lock className="w-4 h-4 mr-2 text-blue-500" />
-              Password
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                placeholder="Minimal 6 karakter"
-                className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-3 focus:ring-blue-300 transition duration-200 bg-gray-50 hover:bg-white text-gray-800 pr-12"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-gray-500 hover:text-blue-500 transition duration-200"
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-            {errors.password && <div className="text-red-500 text-xs mt-1 flex items-center"><span className="mr-1">⚠️</span>{errors.password}</div>}
-          </div>
-
-          {/* Role Field */}
-          <div>
-            <label className="block text-gray-700 mb-1 font-medium text-sm flex items-center">
-              <UserCheck className="w-4 h-4 mr-2 text-blue-500" />
-              Daftar Sebagai
-            </label>
-            <select
-              name="role"
-              value={form.role}
-              onChange={handleChange}
-              className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-3 focus:ring-blue-300 transition duration-200 bg-gray-50 hover:bg-white text-gray-800 cursor-pointer"
-            >
-              <option value="user">👨‍🎓 Siswa - Belajar dari mentor</option>
-              <option value="mentor">👨‍🏫 Mentor - Mengajar dan membimbing</option>
-            </select>
-            <p className="text-xs text-gray-500 mt-1">{roleData[form.role].description}</p>
-          </div>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-3 focus:ring-blue-300 transition duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                Mendaftar...
-              </>
-            ) : (
-              <>
-                <UserCheck className="w-5 h-5 mr-2" />
-                Daftar Sekarang
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Login Link */}
-        <div className="text-center pt-4 border-t border-gray-200">
-          <p className="text-gray-600 text-sm">
-            Sudah punya akun?{' '}
-            <Link
-              to="/login"
-              className="text-blue-500 hover:text-blue-600 font-semibold transition duration-200 hover:underline"
-            >
-              Masuk di sini
-            </Link>
-          </p>
-        </div>
-
-        {/* Educational quote */}
-        <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded-lg mt-4">
-          <p className="text-blue-800 text-xs italic text-center">
-            "Pendidikan adalah investasi terbaik untuk masa depan"
-          </p>
+      {/* Neural Network Grid */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="grid grid-cols-12 grid-rows-12 h-full w-full">
+          {[...Array(144)].map((_, i) => (
+            <div 
+              key={i} 
+              className="border border-white/10 animate-pulse" 
+              style={{ animationDelay: `${i * 0.1}s` }}
+            ></div>
+          ))}
         </div>
       </div>
+
+      {/* Main Registration Form */}
+      <div className="relative z-10 w-full max-w-lg mx-4">
+        <div className="bg-white/10 backdrop-blur-xl p-8 md:p-10 rounded-3xl border border-white/20 shadow-2xl space-y-6 transform hover:scale-[1.01] transition-all duration-300 hover:shadow-3xl">
+          
+          {/* Holographic Header Effects */}
+          <div className="absolute -top-1 -left-1 -right-1 h-1 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 rounded-t-3xl opacity-80 blur-sm"></div>
+          <div className="absolute -top-0.5 -left-0.5 -right-0.5 h-0.5 bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 rounded-t-3xl"></div>
+          
+          {/* Back Button */}
+          <div className="flex items-center mb-6">
+            <button className="flex items-center text-white/80 hover:text-white transition-all duration-300 group">
+              <ArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform duration-300" />
+              <span className="font-medium tracking-wide">KEMBALI</span>
+            </button>
+          </div>
+
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="flex justify-center items-center mb-6">
+              <div className={`p-4 rounded-3xl bg-gradient-to-r ${roleData[form.role].gradient} text-white shadow-2xl ${roleData[form.role].glow} transform hover:scale-110 transition-all duration-300 relative`}>
+                {roleData[form.role].icon}
+                <div className={`absolute inset-0 rounded-3xl bg-gradient-to-r ${roleData[form.role].gradient} opacity-20 blur-xl`}></div>
+              </div>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-black text-white mb-3 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+              DAFTAR AKUN
+            </h2>
+            <p className="text-white/70 text-sm font-medium tracking-wider">
+              MYSCOVER • Pendaftaran Akun Baru
+            </p>
+          </div>
+
+          {/* Success Message */}
+          {success && (
+            <div className="bg-emerald-500/20 backdrop-blur-md border border-emerald-400/30 text-emerald-200 p-4 rounded-2xl animate-pulse-glow">
+              <div className="flex items-center space-x-3">
+                <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse"></div>
+                <div>
+                  <p className="font-bold text-sm">{success}</p>
+                  <p className="text-xs text-emerald-300">Memproses pendaftaran...</p>
+                </div>
+                <Sparkles className="w-5 h-5 text-emerald-400 animate-pulse" />
+              </div>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {errorMsg && (
+            <div className="bg-red-500/20 backdrop-blur-md border border-red-400/30 text-red-200 p-4 rounded-2xl animate-shake">
+              <div className="flex items-center justify-center space-x-2">
+                <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                <span className="font-medium">{errorMsg}</span>
+                <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse delay-500"></div>
+              </div>
+            </div>
+          )}
+
+          {/* Registration Form */}
+          <div className="space-y-5">
+            {/* Name Field */}
+            <div className="group">
+              <label className="block text-white/90 mb-2 font-bold text-sm flex items-center space-x-2">
+                <User className="w-4 h-4 text-cyan-400" />
+                <span>NAMA LENGKAP</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="Masukkan nama lengkap Anda..."
+                  className="w-full bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all duration-300 text-white placeholder-white/50 group-hover:bg-white/15"
+                />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-500/0 via-cyan-500/5 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+              </div>
+              {errors.name && (
+                <div className="text-red-300 text-xs mt-2 flex items-center space-x-1 animate-pulse">
+                  <div className="w-1 h-1 bg-red-400 rounded-full"></div>
+                  <span>{errors.name}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Email Field */}
+            <div className="group">
+              <label className="block text-white/90 mb-2 font-bold text-sm flex items-center space-x-2">
+                <Mail className="w-4 h-4 text-purple-400" />
+                <span>ALAMAT EMAIL</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="contoh@email.com"
+                  className="w-full bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-purple-400/50 transition-all duration-300 text-white placeholder-white/50 group-hover:bg-white/15"
+                />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/0 via-purple-500/5 to-purple-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+              </div>
+              {errors.email && (
+                <div className="text-red-300 text-xs mt-2 flex items-center space-x-1 animate-pulse">
+                  <div className="w-1 h-1 bg-red-400 rounded-full"></div>
+                  <span>{errors.email}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Password Field */}
+            <div className="group">
+              <label className="block text-white/90 mb-2 font-bold text-sm flex items-center space-x-2">
+                <Lock className="w-4 h-4 text-emerald-400" />
+                <span>KATA SANDI</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="Minimal 6 karakter..."
+                  className="w-full bg-white/10 backdrop-blur-md border border-white/20 p-4 pr-12 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-400/50 transition-all duration-300 text-white placeholder-white/50 group-hover:bg-white/15"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white transition-colors duration-200"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-emerald-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+              </div>
+              {errors.password && (
+                <div className="text-red-300 text-xs mt-2 flex items-center space-x-1 animate-pulse">
+                  <div className="w-1 h-1 bg-red-400 rounded-full"></div>
+                  <span>{errors.password}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Role Field */}
+            <div className="group">
+              <label className="block text-white/90 mb-2 font-bold text-sm flex items-center space-x-2">
+                <UserCheck className="w-4 h-4 text-pink-400" />
+                <span>TIPE AKUN</span>
+              </label>
+              <div className="relative">
+                <select
+                  name="role"
+                  value={form.role}
+                  onChange={handleChange}
+                  className="w-full bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-400/50 focus:border-pink-400/50 transition-all duration-300 text-white cursor-pointer appearance-none group-hover:bg-white/15"
+                >
+                  <option value="user" className="bg-gray-800 text-white">🎓 Siswa - Akses Materi Pembelajaran</option>
+                  <option value="mentor" className="bg-gray-800 text-white">👨‍🏫 Mentor - Berbagi Pengetahuan</option>
+                </select>
+                <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                  <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-white/60"></div>
+                </div>
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500/0 via-pink-500/5 to-pink-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+              </div>
+              <p className="text-white/50 text-xs mt-2 font-mono tracking-wide">
+                {roleData[form.role].description}
+              </p>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className={`w-full bg-gradient-to-r ${roleData[form.role].gradient} text-white p-4 rounded-2xl font-black text-lg transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-white/30 shadow-2xl ${roleData[form.role].glow} relative overflow-hidden ${loading ? 'opacity-80 cursor-not-allowed' : 'hover:shadow-3xl'}`}
+            >
+              <div className={`absolute inset-0 bg-gradient-to-r ${roleData[form.role].gradient} opacity-0 hover:opacity-20 blur-xl transition-opacity duration-300`}></div>
+              
+              {loading ? (
+                <div className="flex items-center justify-center space-x-3">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Memproses pendaftaran...</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center space-x-2">
+                  <UserCheck className="w-5 h-5" />
+                  <span>DAFTAR AKUN</span>
+                  <Sparkles className="w-4 h-4 animate-pulse" />
+                </div>
+              )}
+            </button>
+          </div>
+
+          {/* Login Link */}
+          <div className="text-center pt-6 border-t border-white/10">
+            <p className="text-white/70 text-sm">
+              Sudah punya akun?{' '}
+              <button className="text-cyan-400 hover:text-cyan-300 font-bold transition-all duration-300 hover:underline underline-offset-4 decoration-2 decoration-cyan-400">
+                MASUK DI SINI
+              </button>
+            </p>
+          </div>
+
+          {/* Futuristic Quote */}
+          <div className="bg-gradient-to-r from-white/5 to-white/10 backdrop-blur-md border-l-4 border-cyan-400 p-4 rounded-2xl">
+            <div className="flex items-center space-x-3">
+              <Brain className="w-5 h-5 text-cyan-400 animate-pulse" />
+              <p className="text-white/80 text-sm font-medium italic">
+                "Evolusi melalui pendidikan, transendensi melalui pengetahuan."
+              </p>
+            </div>
+          </div>
+
+          {/* System Info */}
+          <div className="text-center">
+            <p className="text-white/30 text-xs font-mono tracking-widest">
+              MYSCOVER v4.2.1 • Platform Pendaftaran
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Custom Animations */}
+      <style jsx>{`
+        @keyframes float {
+          0%, 100% { 
+            transform: translateY(0px) rotate(0deg) scale(1); 
+            opacity: 0.1; 
+          }
+          33% { 
+            transform: translateY(-15px) rotate(120deg) scale(1.1); 
+            opacity: 0.3; 
+          }
+          66% { 
+            transform: translateY(-5px) rotate(240deg) scale(0.9); 
+            opacity: 0.2; 
+          }
+        }
+        .animate-float {
+          animation: float 10s ease-in-out infinite;
+        }
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+          20%, 40%, 60%, 80% { transform: translateX(3px); }
+        }
+        .animate-shake {
+          animation: shake 0.6s ease-in-out;
+        }
+        @keyframes pulse-glow {
+          0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
+          50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.6); }
+        }
+        .animate-pulse-glow {
+          animation: pulse-glow 2s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 };
