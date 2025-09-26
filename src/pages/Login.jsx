@@ -1,13 +1,23 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, User, BookOpen, GraduationCap, Users, Award, Star, Brain } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Eye, EyeOff, Mail, Lock, User, BookOpen, GraduationCap, Users, Award, Star, Brain, ArrowLeft } from 'lucide-react';
 
 export default function Login({ onLogin }) {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('admin');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleBackClick = () => {
+    navigate('/');
+  };
+
+  const handleRegisterClick = () => {
+    navigate('/register');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,27 +30,57 @@ export default function Login({ onLogin }) {
       // Simulate API call with timeout
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Mock success response
+      // Mock success response with proper token format
+      // Use existing IDs from database
+      let userId;
+      if (role === 'mentor') {
+        userId = 5; // Use existing mentor ID from database
+      } else if (role === 'admin') {
+        userId = 1; // Admin ID
+      } else {
+        userId = 1; // User ID
+      }
+      
+      const token = `${role}_${userId}_${Date.now()}`;
+      
       const mockResponse = {
         data: {
-          token: 'mock-jwt-token-' + Date.now(),
+          token: token,
           role: role,
-          user: { email, role }
+          user: { 
+            id: userId,
+            email, 
+            role,
+            name: role === 'admin' ? 'Administrator' : 
+                  role === 'mentor' ? 'Mentor User' : 'Student User'
+          }
         }
       };
       
       console.log('✅ [LOGIN] Mock Response:', mockResponse.data);
       
-      // Save token to localStorage
+      // Save token and user data to localStorage
       if (mockResponse.data.token) {
         localStorage.removeItem('token');
         localStorage.setItem('token', mockResponse.data.token);
       }
       
+      // Save user data to localStorage
+      localStorage.setItem('user', JSON.stringify(mockResponse.data.user));
+      
       onLogin && onLogin(mockResponse.data);
       
-      // Simulate navigation
+      // Navigate based on role with small delay to ensure state update
       console.log(`🚀 Redirecting to ${role} dashboard...`);
+      setTimeout(() => {
+        if (role === 'admin') {
+          navigate('/admin');
+        } else if (role === 'mentor') {
+          navigate('/mentor');
+        } else if (role === 'user') {
+          navigate('/user');
+        }
+      }, 100);
       
     } catch (err) {
       console.error('[Login] error:', err);
@@ -133,6 +173,17 @@ export default function Login({ onLogin }) {
           {/* Holographic Header Effect */}
           <div className="absolute -top-1 -left-1 -right-1 h-1 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 rounded-t-3xl opacity-80 blur-sm"></div>
           <div className="absolute -top-0.5 -left-0.5 -right-0.5 h-0.5 bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 rounded-t-3xl"></div>
+          
+          {/* Back Button */}
+          <div className="flex items-center mb-6">
+            <button 
+              onClick={handleBackClick}
+              className="flex items-center text-white/80 hover:text-white transition-all duration-300 group"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform duration-300" />
+              <span className="font-medium tracking-wide">KEMBALI</span>
+            </button>
+          </div>
           
           {/* Header */}
           <div className="text-center mb-8">
@@ -260,6 +311,19 @@ export default function Login({ onLogin }) {
                 "Masa depan milik mereka yang belajar, melupakan, dan belajar kembali."
               </p>
             </div>
+          </div>
+
+          {/* Register Link */}
+          <div className="text-center pt-6 border-t border-white/10">
+            <p className="text-white/70 text-sm">
+              Belum punya akun?{' '}
+              <button 
+                onClick={handleRegisterClick}
+                className="text-cyan-400 hover:text-cyan-300 font-bold transition-all duration-300 hover:underline underline-offset-4 decoration-2 decoration-cyan-400"
+              >
+                DAFTAR DI SINI
+              </button>
+            </p>
           </div>
 
           {/* Version Info */}

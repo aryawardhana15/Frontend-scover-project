@@ -325,6 +325,64 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
   const [loadingMataPelajaran, setLoadingMataPelajaran] = useState(false);
   const [selectedMataPelajaran, setSelectedMataPelajaran] = useState('');
 
+  // Initial data loading like AdminDashboard
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    console.log('🔑 [MENTOR DASHBOARD] Token:', token ? token.substring(0, 20) + '...' : 'none');
+    if (!token) {
+      console.warn('⚠️ [MENTOR DASHBOARD] No token found, redirecting to login...');
+      window.location.href = '/login';
+      return;
+    }
+
+    if (!mentorId) {
+      console.log('⚠️ [MENTOR DASHBOARD] No mentorId, skipping initial data fetch');
+      return;
+    }
+
+    const fetchInitialData = async () => {
+      try {
+        console.log('🔍 [MENTOR DASHBOARD] Fetching initial data for mentorId:', mentorId);
+        const [
+          jadwalRes,
+          notifRes,
+          mataPelajaranRes,
+          mentorMataPelajaranRes
+        ] = await Promise.all([
+          api.get(`/mentors/${mentorId}/jadwal`),
+          api.get('/notifikasi'),
+          api.get('/mata-pelajaran'),
+          api.get(`/mentor-mata-pelajaran/by-mentor?mentor_id=${mentorId}`)
+        ]);
+        
+        setJadwal(jadwalRes.data);
+        setAllMataPelajaran(mataPelajaranRes.data);
+        setMentorMataPelajaran(mentorMataPelajaranRes.data);
+        
+        // Handle notifications
+        const notifMentor = notifRes.data.filter(n => n.user_id === mentorId);
+        notifMentor.forEach(n => {
+          if (!shownNotifIds.includes(n.id)) {
+            toast.info(n.pesan);
+            setShownNotifIds(prev => [...prev, n.id]);
+          }
+        });
+        
+        console.log('✅ [MENTOR DASHBOARD] Initial data fetched successfully');
+      } catch (error) {
+        console.error('❌ [MENTOR DASHBOARD] Error fetching initial data:', error);
+        if (error.response?.status === 401) {
+          console.warn('⚠️ [MENTOR DASHBOARD] Unauthorized, redirecting to login...');
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+        }
+      }
+    };
+
+    fetchInitialData();
+  }, [mentorId, shownNotifIds]);
+
+  // Notification polling (separate from initial load)
   useEffect(() => {
     if (!mentorId) return;
     let interval;
@@ -342,29 +400,10 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
         // silent
       }
     };
-    fetchNotif();
+    // Start polling after initial load
     interval = setInterval(fetchNotif, 10000);
     return () => clearInterval(interval);
   }, [mentorId, shownNotifIds]);
-
-  useEffect(() => {
-    if (!mentorId) {
-      console.log('⚠️ [MENTOR DASHBOARD] No mentorId, skipping jadwal fetch');
-      return;
-    }
-    console.log('🔄 [MENTOR DASHBOARD] Fetching jadwal for mentorId:', mentorId);
-    setLoadingJadwal(true);
-    api.get(`/mentors/${mentorId}/jadwal`)
-      .then(res => {
-        console.log('✅ [MENTOR DASHBOARD] Jadwal data received:', res.data);
-        setJadwal(res.data);
-        setLoadingJadwal(false);
-      })
-      .catch(err => {
-        console.error('❌ [MENTOR DASHBOARD] Error fetching jadwal:', err);
-        setLoadingJadwal(false);
-      });
-  }, [mentorId]);
 
   const handleOpenHistoryModal = (jadwal) => {
     setSelectedJadwal(jadwal);
@@ -436,21 +475,12 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
     }
   }, [activeTab, mentorId]);
 
-  // Fetch mata pelajaran data
+  // Fetch mata pelajaran data (simplified since initial data already loaded)
   const fetchMataPelajaran = () => {
     if (!mentorId) return;
     setLoadingMataPelajaran(true);
     
-    // Fetch all available mata pelajaran
-    api.get('/mata-pelajaran')
-      .then(res => {
-        setAllMataPelajaran(res.data);
-      })
-      .catch(() => {
-        toast.error('Gagal memuat daftar mata pelajaran');
-      });
-    
-    // Fetch mentor's current mata pelajaran
+    // Only fetch mentor's current mata pelajaran (all mata pelajaran already loaded)
     api.get(`/mentor-mata-pelajaran/by-mentor?mentor_id=${mentorId}`)
       .then(res => {
         setMentorMataPelajaran(res.data);
