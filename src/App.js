@@ -10,7 +10,15 @@ import UserDashboard from "./pages/UserDashboard";
 import Toast from "./components/Toast";
 
 function App() {
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
+  const [user, setUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (error) {
+      console.error('Error parsing user from localStorage:', error);
+      return null;
+    }
+  });
 
   const handleLogin = (userData) => {
     localStorage.setItem('user', JSON.stringify(userData));
