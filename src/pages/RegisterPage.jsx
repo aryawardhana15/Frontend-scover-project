@@ -72,9 +72,10 @@ const RegisterPage = () => {
       setForm({ name: '', email: '', password: '', role: 'user' });
       setErrors({});
       
-      // Simulate redirect after success
+      // Redirect to login page after success
       setTimeout(() => {
         console.log('🚀 Redirecting to login page...');
+        navigate('/login');
       }, form.role === 'mentor' ? 3000 : 2000);
       
     } catch (err) {

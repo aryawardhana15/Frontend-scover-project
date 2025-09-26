@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import HomePage from "./pages/HomePage";
+import RegisterPage from "./pages/RegisterPage";
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import MentorDashboard from "./pages/MentorDashboard";
@@ -33,10 +34,11 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
-          {user?.role === "admin" && <Route path="/admin/*" element={<AdminDashboard user={user} onLogout={handleLogout} />} />}
-          {user?.role === "mentor" && <Route path="/mentor/*" element={<MentorDashboard user={user} onLogout={handleLogout} onProfileUpdate={handleProfileUpdate} />} />}
-          {user?.role === "user" && <Route path="/user/*" element={<UserDashboard user={user} onLogout={handleLogout} />} />}
+          {user?.role === "admin" && <Route path="/admin" element={<AdminDashboard user={user} onLogout={handleLogout} />} />}
+          {user?.role === "mentor" && <Route path="/mentor" element={<MentorDashboard user={user} onLogout={handleLogout} onProfileUpdate={handleProfileUpdate} />} />}
+          {user?.role === "user" && <Route path="/user" element={<UserDashboard user={user} onLogout={handleLogout} />} />}
          
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
