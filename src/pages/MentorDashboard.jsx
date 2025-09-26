@@ -15,7 +15,22 @@ const WEEK_LABELS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Ming
 const SESI_LABELS = ['1', '2', '3', '4', '5'];
 
 function AvailabilityGrid({ mentorId, mingguKe, onSuccess }) {
-  const [data, setData] = useState([]);
+  const [data, setData] = useState(() => {
+    // Initialize with default grid
+    const arr = [];
+    for (let h of WEEK_LABELS) {
+      for (let s of SESI_LABELS) {
+        arr.push({
+          hari: h,
+          sesi: s,
+          is_available: true,
+          reason: '',
+          kelas_id: null
+        });
+      }
+    }
+    return arr;
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [conflicts, setConflicts] = useState([]);
@@ -43,11 +58,14 @@ function AvailabilityGrid({ mentorId, mingguKe, onSuccess }) {
     }
     console.log('🔄 [AVAILABILITY GRID] Fetching availability for mentorId:', mentorId, 'mingguKe:', mingguKe);
     setLoading(true);
+    setError(null);
+    
     api.get(`/availability-mentor?mentor_id=${mentorId}&minggu_ke=${mingguKe}`)
       .then(res => {
         console.log('✅ [AVAILABILITY GRID] API response:', res.data);
         let avail = generateDefaultGrid();
         console.log('📋 [AVAILABILITY GRID] Default grid generated:', avail.length, 'items');
+        
         if (res.data && res.data.length > 0) {
           avail = avail.map(item => {
             const found = res.data.find(d => d.hari === item.hari && d.sesi === item.sesi);
@@ -57,14 +75,20 @@ function AvailabilityGrid({ mentorId, mingguKe, onSuccess }) {
         } else {
           console.log('📋 [AVAILABILITY GRID] Using default grid (no API data)');
         }
+        
         setData(avail);
         setLoading(false);
         console.log('✅ [AVAILABILITY GRID] Final data set:', avail.length, 'items');
+        console.log('📋 [AVAILABILITY GRID] Sample data:', avail.slice(0, 3));
       })
       .catch(err => {
         console.error('❌ [AVAILABILITY GRID] Error fetching data:', err);
         setError('Gagal mengambil data availability');
         setLoading(false);
+        // Keep default grid even on error
+        const defaultGrid = generateDefaultGrid();
+        setData(defaultGrid);
+        console.log('📋 [AVAILABILITY GRID] Using default grid due to error');
       });
   }, [mentorId, mingguKe]);
 
@@ -174,13 +198,26 @@ function AvailabilityGrid({ mentorId, mingguKe, onSuccess }) {
                     </td>
                     {WEEK_LABELS.map(hari => {
                       const item = data.find(d => d.hari === hari && d.sesi === sesi);
+                      const isChecked = item?.is_available || false;
+                      
+                      // Debug logging for first few items
+                      if (sesi === '1' && hari === 'Senin') {
+                        console.log('🔍 [AVAILABILITY GRID] Render debug:', { 
+                          hari, 
+                          sesi, 
+                          item, 
+                          isChecked,
+                          dataLength: data.length 
+                        });
+                      }
+                      
                       return (
                         <td key={`${hari}-${sesi}`} className="p-4 text-center">
                           <label className="inline-flex items-center cursor-pointer">
                             <input
                               type="checkbox"
                               className="form-checkbox h-6 w-6 text-indigo-600 rounded-md border-2 border-gray-300 focus:ring-indigo-500 transition-all duration-200 ease-in-out"
-                              checked={item?.is_available || false}
+                              checked={isChecked}
                               onChange={e => handleCheck(hari, sesi, e.target.checked)}
                             />
                           </label>
