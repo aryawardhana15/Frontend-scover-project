@@ -13,7 +13,9 @@ function App() {
   const [user, setUser] = useState(() => {
     try {
       const savedUser = localStorage.getItem('user');
-      return savedUser ? JSON.parse(savedUser) : null;
+      const parsedUser = savedUser ? JSON.parse(savedUser) : null;
+      console.log('🔍 [APP] User state initialized:', parsedUser);
+      return parsedUser;
     } catch (error) {
       console.error('Error parsing user from localStorage:', error);
       return null;
@@ -21,8 +23,10 @@ function App() {
   });
 
   const handleLogin = (userData) => {
+    console.log('🔍 [APP] handleLogin called with:', userData);
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
+    console.log('🔍 [APP] User state updated to:', userData);
   };
 
   const handleLogout = () => {

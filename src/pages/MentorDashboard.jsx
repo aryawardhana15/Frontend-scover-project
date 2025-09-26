@@ -37,32 +37,49 @@ function AvailabilityGrid({ mentorId, mingguKe, onSuccess }) {
   };
 
   useEffect(() => {
-    if (!mentorId || !mingguKe) return;
+    if (!mentorId || !mingguKe) {
+      console.log('⚠️ [AVAILABILITY GRID] No mentorId or mingguKe, skipping fetch');
+      return;
+    }
+    console.log('🔄 [AVAILABILITY GRID] Fetching availability for mentorId:', mentorId, 'mingguKe:', mingguKe);
     setLoading(true);
     api.get(`/availability-mentor?mentor_id=${mentorId}&minggu_ke=${mingguKe}`)
       .then(res => {
+        console.log('✅ [AVAILABILITY GRID] API response:', res.data);
         let avail = generateDefaultGrid();
+        console.log('📋 [AVAILABILITY GRID] Default grid generated:', avail.length, 'items');
         if (res.data && res.data.length > 0) {
           avail = avail.map(item => {
             const found = res.data.find(d => d.hari === item.hari && d.sesi === item.sesi);
             return found ? { ...item, ...found, is_available: !!found.is_available } : item;
           });
+          console.log('🔄 [AVAILABILITY GRID] Grid updated with API data');
+        } else {
+          console.log('📋 [AVAILABILITY GRID] Using default grid (no API data)');
         }
         setData(avail);
         setLoading(false);
+        console.log('✅ [AVAILABILITY GRID] Final data set:', avail.length, 'items');
       })
-      .catch(() => {
+      .catch(err => {
+        console.error('❌ [AVAILABILITY GRID] Error fetching data:', err);
         setError('Gagal mengambil data availability');
         setLoading(false);
       });
   }, [mentorId, mingguKe]);
 
   const handleCheck = (hari, sesi, checked) => {
+    console.log('🔄 [AVAILABILITY GRID] handleCheck called:', { hari, sesi, checked });
     setData(prev => {
       const idx = prev.findIndex(item => item.hari === hari && item.sesi === sesi);
-      if (idx === -1) return prev;
+      console.log('🔍 [AVAILABILITY GRID] Found item at index:', idx);
+      if (idx === -1) {
+        console.log('⚠️ [AVAILABILITY GRID] Item not found, returning previous data');
+        return prev;
+      }
       const newArr = [...prev];
       newArr[idx] = { ...newArr[idx], is_available: checked };
+      console.log('✅ [AVAILABILITY GRID] Updated item:', newArr[idx]);
       return newArr;
     });
   };
@@ -251,6 +268,10 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
   const [showProfile, setShowProfile] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const mentorId = user?.id !== undefined ? user.id : user?.mentor_id;
+  
+  // Debug logging
+  console.log('🔍 [MENTOR DASHBOARD] User data:', user);
+  console.log('🔍 [MENTOR DASHBOARD] Mentor ID:', mentorId);
   const [mingguKe, setMingguKe] = useState(getCurrentWeekNumber());
   const [shownNotifIds, setShownNotifIds] = useState([]);
   const [jadwal, setJadwal] = useState([]);
@@ -290,14 +311,22 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
   }, [mentorId, shownNotifIds]);
 
   useEffect(() => {
-    if (!mentorId) return;
+    if (!mentorId) {
+      console.log('⚠️ [MENTOR DASHBOARD] No mentorId, skipping jadwal fetch');
+      return;
+    }
+    console.log('🔄 [MENTOR DASHBOARD] Fetching jadwal for mentorId:', mentorId);
     setLoadingJadwal(true);
     api.get(`/mentors/${mentorId}/jadwal`)
       .then(res => {
+        console.log('✅ [MENTOR DASHBOARD] Jadwal data received:', res.data);
         setJadwal(res.data);
         setLoadingJadwal(false);
       })
-      .catch(() => setLoadingJadwal(false));
+      .catch(err => {
+        console.error('❌ [MENTOR DASHBOARD] Error fetching jadwal:', err);
+        setLoadingJadwal(false);
+      });
   }, [mentorId]);
 
   const handleOpenHistoryModal = (jadwal) => {
