@@ -1,13 +1,23 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User, Mail, Lock, UserCheck, Eye, EyeOff, BookOpen, GraduationCap, Users, Star, Brain, ArrowLeft, Sparkles } from 'lucide-react';
 
 const RegisterPage = () => {
+  const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'user' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  const handleBackClick = () => {
+    navigate('/');
+  };
+
+  const handleLoginClick = () => {
+    navigate('/login');
+  };
 
   // Check if user is already logged in
   useEffect(() => {
@@ -148,7 +158,10 @@ const RegisterPage = () => {
           
           {/* Back Button */}
           <div className="flex items-center mb-6">
-            <button className="flex items-center text-white/80 hover:text-white transition-all duration-300 group">
+            <button 
+              onClick={handleBackClick}
+              className="flex items-center text-white/80 hover:text-white transition-all duration-300 group"
+            >
               <ArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform duration-300" />
               <span className="font-medium tracking-wide">KEMBALI</span>
             </button>
@@ -332,7 +345,10 @@ const RegisterPage = () => {
           <div className="text-center pt-6 border-t border-white/10">
             <p className="text-white/70 text-sm">
               Sudah punya akun?{' '}
-              <button className="text-cyan-400 hover:text-cyan-300 font-bold transition-all duration-300 hover:underline underline-offset-4 decoration-2 decoration-cyan-400">
+              <button 
+                onClick={handleLoginClick}
+                className="text-cyan-400 hover:text-cyan-300 font-bold transition-all duration-300 hover:underline underline-offset-4 decoration-2 decoration-cyan-400"
+              >
                 MASUK DI SINI
               </button>
             </p>
