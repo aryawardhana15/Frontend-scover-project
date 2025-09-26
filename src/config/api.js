@@ -62,6 +62,14 @@ api.interceptors.request.use(
           // Simple tokens don't expire, just add to headers
           config.headers.Authorization = `Bearer ${token}`;
           console.log('✅ [REQUEST] Simple token added to headers');
+        } else if (token.startsWith('mock-jwt-token-')) {
+          console.log('- Mock token detected, converting to simple format');
+          // Convert mock token to simple format for testing
+          const role = 'admin'; // Default to admin for mock tokens
+          const userId = Math.floor(Math.random() * 1000) + 1;
+          const simpleToken = `${role}_${userId}_${Date.now()}`;
+          config.headers.Authorization = `Bearer ${simpleToken}`;
+          console.log('✅ [REQUEST] Mock token converted to simple format');
         } else {
           // Handle JWT tokens
           const parts = token.split('.');
@@ -189,7 +197,12 @@ api.interceptors.response.use(
           console.log('\n🔑 [ERROR] Authentication analysis:');
           const token = localStorage.getItem('token');
           console.log('- Token exists:', !!token);
-          if (token) {
+          
+          // Don't redirect if this is a login request (to avoid redirect loop)
+          const isLoginRequest = error.config?.url?.includes('/login');
+          console.log('- Is login request:', isLoginRequest);
+          
+          if (token && !isLoginRequest) {
             try {
               const parts = token.split('.');
               if (parts.length === 3) {
@@ -201,10 +214,12 @@ api.interceptors.response.use(
             } catch (e) {
               console.error('- Token parse error:', e.message);
             }
+            console.log('- Clearing token and redirecting...');
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+          } else if (isLoginRequest) {
+            console.log('- Login request failed, not redirecting');
           }
-          console.log('- Clearing token and redirecting...');
-          localStorage.removeItem('token');
-          window.location.href = '/login';
           break;
           
         case 403:
