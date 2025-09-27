@@ -27,6 +27,18 @@ export default function Login({ onLogin }) {
     try {
       console.log('[Login] role:', role, 'email:', email);
       
+      // Clear any existing data first
+      console.log('🔍 [LOGIN] Clearing existing localStorage data...');
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Also clear any cookies that might contain old tokens
+      document.cookie.split(";").forEach(function(c) { 
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+      });
+      
+      console.log('🔍 [LOGIN] All storage cleared');
+      
       // Simulate API call with timeout
       await new Promise(resolve => setTimeout(resolve, 1500));
       
@@ -57,18 +69,42 @@ export default function Login({ onLogin }) {
         }
       };
       
+      console.log('🔍 [LOGIN] Generated token:', token);
+      console.log('🔍 [LOGIN] User ID:', userId);
+      console.log('🔍 [LOGIN] Role:', role);
+      
       console.log('✅ [LOGIN] Mock Response:', mockResponse.data);
       
-      // Save token and user data to localStorage
-      if (mockResponse.data.token) {
-        localStorage.removeItem('token');
-        localStorage.setItem('token', mockResponse.data.token);
-      }
+      // Clear old data and save new token and user data to localStorage
+      console.log('🔍 [LOGIN] Clearing localStorage...');
+      localStorage.clear(); // Clear all old data
       
-      // Save user data to localStorage
+      // Wait a bit to ensure clearing is complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      console.log('🔍 [LOGIN] Saving new token:', mockResponse.data.token);
+      localStorage.setItem('token', mockResponse.data.token);
+      
+      console.log('🔍 [LOGIN] Saving new user data:', mockResponse.data.user);
       localStorage.setItem('user', JSON.stringify(mockResponse.data.user));
       
-      onLogin && onLogin(mockResponse.data);
+      // Verify what was actually saved
+      const savedToken = localStorage.getItem('token');
+      const savedUser = localStorage.getItem('user');
+      console.log('🔍 [LOGIN] Verification - Token saved:', savedToken);
+      console.log('🔍 [LOGIN] Verification - User saved:', savedUser);
+      
+      // Double check token format
+      if (savedToken) {
+        const tokenParts = savedToken.split('_');
+        console.log('🔍 [LOGIN] Token parts:', tokenParts);
+        console.log('🔍 [LOGIN] Token role:', tokenParts[0]);
+        console.log('🔍 [LOGIN] Token user ID:', tokenParts[1]);
+        console.log('🔍 [LOGIN] Expected role:', role);
+        console.log('🔍 [LOGIN] Role match:', tokenParts[0] === role);
+      }
+      
+      onLogin && onLogin(mockResponse.data.user);
       
       // Navigate based on role with small delay to ensure state update
       console.log(`🚀 Redirecting to ${role} dashboard...`);

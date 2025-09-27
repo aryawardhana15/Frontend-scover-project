@@ -10,12 +10,34 @@ export default function MentorProfile({ user, onBack, onProfileUpdate }) {
   const [preview, setPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [mentorData, setMentorData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user?.id) return;
-    api.get(`/mentor-mata-pelajaran/by-mentor?mentor_id=${user.id}`)
-      .then(res => setMapel(res.data))
-      .catch(() => setMapel([]));
+    
+    // Fetch mentor data from database
+    const fetchMentorData = async () => {
+      try {
+        setLoading(true);
+        const [mapelRes, mentorRes] = await Promise.all([
+          api.get(`/mentor-mata-pelajaran/by-mentor?mentor_id=${user.id}`),
+          api.get(`/mentors/${user.id}`)
+        ]);
+        
+        setMapel(mapelRes.data);
+        setMentorData(mentorRes.data);
+        console.log('👤 [MENTOR PROFILE] Mentor data loaded:', mentorRes.data);
+      } catch (error) {
+        console.error('❌ [MENTOR PROFILE] Error loading data:', error);
+        setMapel([]);
+        setMentorData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMentorData();
   }, [user]);
 
   const handleFileChange = (e) => {
@@ -65,7 +87,7 @@ export default function MentorProfile({ user, onBack, onProfileUpdate }) {
             <img src={profileImageUrl} alt="Profile" className="w-24 h-24 rounded-full object-cover shadow-lg" />
           ) : (
             <div className="w-24 h-24 rounded-full bg-blue-200 flex items-center justify-center text-4xl font-bold text-blue-700 mb-4 shadow-lg">
-              {user?.nama ? user.nama[0].toUpperCase() : 'M'}
+              {(mentorData?.nama || user?.nama || user?.name || 'M')[0].toUpperCase()}
             </div>
           )}
           <label htmlFor="profile-upload" className="absolute -bottom-2 -right-2 bg-white p-2 rounded-full cursor-pointer shadow-md hover:bg-gray-100 transition">
@@ -87,8 +109,36 @@ export default function MentorProfile({ user, onBack, onProfileUpdate }) {
         )}
         {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
 
-        <div className="text-2xl font-bold mt-4 mb-1 text-gray-800">{user?.nama}</div>
-        <div className="text-gray-600 mb-4">{user?.email}</div>
+        {loading ? (
+          <div className="text-center py-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-500 mt-2">Memuat data...</p>
+          </div>
+        ) : (
+          <>
+            <div className="text-2xl font-bold mt-4 mb-1 text-gray-800">
+              {mentorData?.nama || user?.nama || user?.name || 'Mentor'}
+            </div>
+            <div className="text-gray-600 mb-4">
+              {mentorData?.email || user?.email || 'mentor@example.com'}
+            </div>
+            {mentorData?.status && (
+              <div className="mb-4">
+                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                  mentorData.status === 'active' 
+                    ? 'bg-green-100 text-green-800' 
+                    : mentorData.status === 'pending'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  Status: {mentorData.status === 'active' ? 'Aktif' : 
+                          mentorData.status === 'pending' ? 'Menunggu Persetujuan' : 
+                          mentorData.status}
+                </span>
+              </div>
+            )}
+          </>
+        )}
         <div className="w-full mb-2">
           <div className="font-semibold text-gray-700 mb-1">Mata Pelajaran yang Diajarkan:</div>
           <div className="flex flex-wrap gap-2">

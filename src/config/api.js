@@ -63,13 +63,10 @@ api.interceptors.request.use(
           config.headers.Authorization = `Bearer ${token}`;
           console.log('✅ [REQUEST] Simple token added to headers');
         } else if (token.startsWith('mock-jwt-token-')) {
-          console.log('- Mock token detected, converting to simple format');
-          // Convert mock token to simple format for testing
-          const role = 'admin'; // Default to admin for mock tokens
-          const userId = Math.floor(Math.random() * 1000) + 1;
-          const simpleToken = `${role}_${userId}_${Date.now()}`;
-          config.headers.Authorization = `Bearer ${simpleToken}`;
-          console.log('✅ [REQUEST] Mock token converted to simple format');
+          console.log('- Mock token detected, using as is');
+          // Use mock token as is, don't convert
+          config.headers.Authorization = `Bearer ${token}`;
+          console.log('✅ [REQUEST] Mock token used as is');
         } else {
           // Handle JWT tokens
           const parts = token.split('.');
@@ -193,6 +190,12 @@ api.interceptors.response.use(
       
       // Detailed error analysis
       switch (error.response.status) {
+        case 503:
+          console.log('\n🚨 [ERROR] Server Unavailable (503):');
+          console.log('- Server is temporarily busy or down');
+          console.log('- This is a server-side issue, not a client issue');
+          console.log('- User should try again later');
+          break;
         case 401:
           console.log('\n🔑 [ERROR] Authentication analysis:');
           const token = localStorage.getItem('token');

@@ -1,0 +1,9 @@
+export { default as DashboardTab } from './DashboardTab';
+export { default as JadwalSesiTab } from './JadwalSesiTab';
+export { default as SilabusTab } from './SilabusTab';
+export { default as PermintaanJadwalTab } from './PermintaanJadwalTab';
+export { default as KetersediaanMentorTab } from './KetersediaanMentorTab';
+export { default as UsersTab } from './UsersTab';
+export { default as PengumumanTab } from './PengumumanTab';
+export { default as HistoryMateriTab } from './HistoryMateriTab';
+export { default as PendingMentorsTab } from './PendingMentorsTab';

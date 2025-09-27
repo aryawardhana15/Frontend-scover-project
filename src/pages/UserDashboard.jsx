@@ -4,8 +4,6 @@ import Header from '../components/Header';
 import PageContainer from '../components/PageContainer';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import PengumumanCarousel from '../components/PengumumanCarousel';
-import Chat from '../components/Chat';
 import { 
   ChatBubbleOvalLeftEllipsisIcon, 
   AcademicCapIcon, 
@@ -17,6 +15,7 @@ import {
   XCircleIcon,
   ClockIcon as ClockOutlineIcon
 } from '@heroicons/react/24/outline';
+import PengumumanCarousel from '../components/PengumumanCarousel';
 import { 
   ChatBubbleOvalLeftEllipsisIcon as ChatSolidIcon,
   AcademicCapIcon as AcademicSolidIcon 
@@ -46,18 +45,8 @@ export default function UserDashboard({ user, onLogout }) {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
-  const [showChat, setShowChat] = useState(false);
   const [history, setHistory] = useState([]);
 
-  const handleOpenChat = () => {
-    console.log('Opening chat, current showChat:', showChat); // Debug log
-    setShowChat(true);
-  };
-
-  const handleCloseChat = () => {
-    console.log('Closing chat'); // Debug log
-    setShowChat(false);
-  };
 
   // Fetch data awal
   useEffect(() => {
@@ -161,40 +150,6 @@ export default function UserDashboard({ user, onLogout }) {
       <Header user={user} onLogout={onLogout} />
       <PageContainer>
         <PengumumanCarousel />
-
-        {/* Floating Chat Button */}
-        <div className="fixed bottom-8 right-8 z-50">
-          <button
-            onClick={handleOpenChat}
-            className="bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 transition-all transform hover:scale-110 flex items-center justify-center"
-            aria-label="Buka chat dengan admin"
-          >
-            <ChatSolidIcon className="h-6 w-6" />
-          </button>
-        </div>
-
-        {/* Chat Component - Pastikan komponen ini ada dan visible */}
-        {showChat && (
-          <div className="fixed inset-0 z-50 flex items-end justify-end p-4">
-            <div className="w-full max-w-md h-96 bg-white rounded-lg shadow-xl border border-gray-200">
-              <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-indigo-600 text-white rounded-t-lg">
-                <h3 className="font-semibold">Chat dengan Admin</h3>
-                <button 
-                  onClick={handleCloseChat}
-                  className="text-white hover:text-gray-200"
-                >
-                  <XCircleIcon className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="p-4 h-full flex items-center justify-center">
-                <p className="text-gray-500">Chat sedang dalam pengembangan...</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Alternatif: Gunakan komponen Chat yang sudah ada jika sudah dibuat */}
-        <Chat isOpen={showChat} onClose={handleCloseChat} />
 
         <div className="mb-6 bg-gradient-to-r from-indigo-50 to-blue-50 p-6 rounded-2xl shadow-sm border border-indigo-100">
           <h1 className="text-3xl font-bold text-indigo-800 mb-2 flex items-center">

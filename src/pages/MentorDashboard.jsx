@@ -5,11 +5,10 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import Header from '../components/Header';
 import MentorProfile from './MentorProfile';
-import PengumumanCarousel from '../components/PengumumanCarousel';
-import Chat from '../components/Chat';
 import { toast } from 'react-toastify';
 import { getCurrentWeekNumber, getWeekRange } from '../utils/dateUtils';
 import { ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/solid';
+import PengumumanCarousel from '../components/PengumumanCarousel';
 
 const WEEK_LABELS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 const SESI_LABELS = ['1', '2', '3', '4', '5'];
@@ -52,8 +51,14 @@ function AvailabilityGrid({ mentorId, mingguKe, onSuccess }) {
   };
 
   useEffect(() => {
+    console.log('🔍 [AVAILABILITY GRID] useEffect triggered');
+    console.log('🔍 [AVAILABILITY GRID] mentorId:', mentorId);
+    console.log('🔍 [AVAILABILITY GRID] mingguKe:', mingguKe);
+    
     if (!mentorId || !mingguKe) {
       console.log('⚠️ [AVAILABILITY GRID] No mentorId or mingguKe, skipping fetch');
+      console.log('⚠️ [AVAILABILITY GRID] mentorId type:', typeof mentorId, 'value:', mentorId);
+      console.log('⚠️ [AVAILABILITY GRID] mingguKe type:', typeof mingguKe, 'value:', mingguKe);
       return;
     }
     console.log('🔄 [AVAILABILITY GRID] Fetching availability for mentorId:', mentorId, 'mingguKe:', mingguKe);
@@ -109,30 +114,54 @@ function AvailabilityGrid({ mentorId, mingguKe, onSuccess }) {
   };
 
   const handleSubmit = () => {
-    if (!mentorId || !mingguKe || !Array.isArray(data)) {
-      setError('Data tidak lengkap. Silakan cek kembali.');
+    console.log('🔄 [AVAILABILITY GRID] handleSubmit called');
+    console.log('📦 [AVAILABILITY GRID] mentorId:', mentorId);
+    console.log('📦 [AVAILABILITY GRID] mingguKe:', mingguKe);
+    console.log('📦 [AVAILABILITY GRID] data length:', data?.length);
+    
+    if (!mentorId) {
+      console.error('❌ [AVAILABILITY GRID] No mentorId');
+      setError('Mentor ID tidak ditemukan. Silakan login ulang.');
       return;
     }
+    
+    if (!mingguKe) {
+      console.error('❌ [AVAILABILITY GRID] No mingguKe');
+      setError('Minggu tidak ditemukan. Silakan refresh halaman.');
+      return;
+    }
+    
+    if (!Array.isArray(data) || data.length === 0) {
+      console.error('❌ [AVAILABILITY GRID] Invalid data array');
+      setError('Data ketersediaan tidak valid. Silakan refresh halaman.');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     setConflicts([]);
+    
+    console.log('📤 [AVAILABILITY GRID] Sending data to backend...');
     api.post('/availability-mentor', {
       mentor_id: mentorId,
       minggu_ke: mingguKe,
       data
     })
-      .then(() => {
+      .then((response) => {
+        console.log('✅ [AVAILABILITY GRID] Success response:', response.data);
         setLoading(false);
+        toast.success('Ketersediaan berhasil disimpan!');
         onSuccess && onSuccess();
       })
       .catch(err => {
+        console.error('❌ [AVAILABILITY GRID] Error response:', err.response?.data);
         setLoading(false);
         if (err.response && err.response.data && err.response.data.conflicts) {
           setConflicts(err.response.data.conflicts);
         } else if (err.response && err.response.data && err.response.data.error) {
           setError('Gagal menyimpan data: ' + err.response.data.error);
         } else {
-          setError('Gagal menyimpan data');
+          setError('Gagal menyimpan data. Silakan coba lagi.');
         }
       });
   };
@@ -303,8 +332,39 @@ function AvailabilityGrid({ mentorId, mingguKe, onSuccess }) {
 
 export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
   const [showProfile, setShowProfile] = useState(false);
-  const [showChat, setShowChat] = useState(false);
-  const mentorId = user?.id !== undefined ? user.id : user?.mentor_id;
+  // Extract mentor ID from token or user object
+  const mentorId = (() => {
+    console.log('🔍 [MENTOR ID CALCULATION] Starting calculation...');
+    console.log('🔍 [MENTOR ID CALCULATION] User object:', user);
+    
+    // Try to get from user.id first
+    if (user?.id !== undefined && user?.id !== null) {
+      console.log('✅ [MENTOR ID CALCULATION] Found mentorId from user.id:', user.id);
+      return user.id;
+    }
+    
+    // Try to get from user.mentor_id
+    if (user?.mentor_id !== undefined && user?.mentor_id !== null) {
+      console.log('✅ [MENTOR ID CALCULATION] Found mentorId from user.mentor_id:', user.mentor_id);
+      return user.mentor_id;
+    }
+    
+    // Try to extract from token
+    const token = localStorage.getItem('token');
+    console.log('🔍 [MENTOR ID CALCULATION] Token:', token);
+    if (token && token.includes('_')) {
+      const parts = token.split('_');
+      console.log('🔍 [MENTOR ID CALCULATION] Token parts:', parts);
+      if (parts.length >= 3 && parts[0] === 'mentor') {
+        const extractedId = parseInt(parts[1]);
+        console.log('✅ [MENTOR ID CALCULATION] Found mentorId from token:', extractedId);
+        return extractedId;
+      }
+    }
+    
+    console.log('❌ [MENTOR ID CALCULATION] No mentorId found');
+    return undefined;
+  })();
   
   // Debug logging
   console.log('🔍 [MENTOR DASHBOARD] User data:', user);
@@ -316,6 +376,8 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
   const [selectedJadwal, setSelectedJadwal] = useState(null);
   const [hasilBelajar, setHasilBelajar] = useState('');
   const [materiDiajarkan, setMateriDiajarkan] = useState('');
+  const [selectedSilabus, setSelectedSilabus] = useState('');
+  const [silabus, setSilabus] = useState([]);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('jadwal');
   const [learningReports, setLearningReports] = useState([]);
@@ -324,46 +386,130 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
   const [allMataPelajaran, setAllMataPelajaran] = useState([]);
   const [loadingMataPelajaran, setLoadingMataPelajaran] = useState(false);
   const [selectedMataPelajaran, setSelectedMataPelajaran] = useState('');
+  const [stats, setStats] = useState({
+    totalKelas: 0,
+    selesai: 0,
+    mingguIni: 0
+  });
+  const [mentorData, setMentorData] = useState(null);
 
   // Initial data loading like AdminDashboard
   useEffect(() => {
     const token = localStorage.getItem('token');
     console.log('🔑 [MENTOR DASHBOARD] Token:', token ? token.substring(0, 20) + '...' : 'none');
+    console.log('🔍 [MENTOR DASHBOARD] User object:', user);
+    console.log('🔍 [MENTOR DASHBOARD] MentorId calculated:', mentorId);
+    
     if (!token) {
       console.warn('⚠️ [MENTOR DASHBOARD] No token found, redirecting to login...');
       window.location.href = '/login';
       return;
     }
 
+    // Wait a bit for user object to be properly set
+    if (!user || !user.id) {
+      console.log('⚠️ [MENTOR DASHBOARD] User object not ready yet, waiting...');
+      return;
+    }
+
     if (!mentorId) {
       console.log('⚠️ [MENTOR DASHBOARD] No mentorId, skipping initial data fetch');
+      console.log('🔍 [MENTOR DASHBOARD] User details:', {
+        id: user?.id,
+        mentor_id: user?.mentor_id,
+        role: user?.role,
+        email: user?.email
+      });
       return;
     }
 
     const fetchInitialData = async () => {
       try {
         console.log('🔍 [MENTOR DASHBOARD] Fetching initial data for mentorId:', mentorId);
+        console.log('🔍 [MENTOR DASHBOARD] API endpoints to call:', [
+          `/mentors/${mentorId}/jadwal`,
+          '/notifikasi',
+          '/mata-pelajaran',
+          `/mentor-mata-pelajaran/by-mentor?mentor_id=${mentorId}`,
+          `/mentors/${mentorId}`
+        ]);
+        
         const [
           jadwalRes,
           notifRes,
           mataPelajaranRes,
-          mentorMataPelajaranRes
+          mentorMataPelajaranRes,
+          mentorRes
         ] = await Promise.all([
           api.get(`/mentors/${mentorId}/jadwal`),
           api.get('/notifikasi'),
           api.get('/mata-pelajaran'),
-          api.get(`/mentor-mata-pelajaran/by-mentor?mentor_id=${mentorId}`)
+          api.get(`/mentor-mata-pelajaran/by-mentor?mentor_id=${mentorId}`),
+          api.get(`/mentors/${mentorId}`)
         ]);
+        
+        console.log('📊 [MENTOR DASHBOARD] API Responses:');
+        console.log('  - Jadwal:', jadwalRes.data);
+        console.log('  - Notifikasi:', notifRes.data);
+        console.log('  - Mata Pelajaran:', mataPelajaranRes.data);
+        console.log('  - Mentor Mata Pelajaran:', mentorMataPelajaranRes.data);
+        console.log('  - Mentor Data:', mentorRes.data);
         
         setJadwal(jadwalRes.data);
         setAllMataPelajaran(mataPelajaranRes.data);
         setMentorMataPelajaran(mentorMataPelajaranRes.data);
+        setMentorData(mentorRes.data);
         
-        // Handle notifications
-        const notifMentor = notifRes.data.filter(n => n.user_id === mentorId);
+        console.log('👤 [MENTOR DASHBOARD] Mentor data loaded:', mentorRes.data);
+        console.log('📋 [MENTOR DASHBOARD] State updates:');
+        console.log('  - Jadwal set to:', jadwalRes.data?.length || 0, 'items');
+        console.log('  - All Mata Pelajaran set to:', mataPelajaranRes.data?.length || 0, 'items');
+        console.log('  - Mentor Mata Pelajaran set to:', mentorMataPelajaranRes.data?.length || 0, 'items');
+        console.log('  - Mentor Data set to:', mentorRes.data);
+        
+        // Calculate stats
+        const jadwalData = jadwalRes.data || [];
+        const totalKelas = jadwalData.length;
+        const selesai = jadwalData.filter(j => j.status === 'completed').length;
+        const today = new Date();
+        const weekStart = new Date(today.setDate(today.getDate() - today.getDay()));
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        const mingguIni = jadwalData.filter(j => {
+          const classDate = new Date(j.tanggal);
+          return classDate >= weekStart && classDate <= weekEnd;
+        }).length;
+        
+        setStats({
+          totalKelas,
+          selesai,
+          mingguIni
+        });
+        
+        console.log('📊 [MENTOR DASHBOARD] Stats calculated:', { totalKelas, selesai, mingguIni });
+        console.log('📊 [MENTOR DASHBOARD] Stats breakdown:');
+        console.log('  - Total jadwal data:', jadwalData.length);
+        console.log('  - Completed jadwal:', jadwalData.filter(j => j.status === 'completed').length);
+        console.log('  - Jadwal this week:', jadwalData.filter(j => {
+          const classDate = new Date(j.tanggal);
+          return classDate >= weekStart && classDate <= weekEnd;
+        }).length);
+        
+        // Handle notifications (mentors may not have notifications in current schema)
+        console.log('🔔 [MENTOR DASHBOARD] Processing notifications...');
+        console.log('🔔 [MENTOR DASHBOARD] All notifications:', notifRes.data);
+        console.log('🔔 [MENTOR DASHBOARD] Current shownNotifIds:', shownNotifIds);
+        
+        const notifMentor = notifRes.data.filter(n => 
+          n.user_id === mentorId || n.mentor_id === mentorId || n.admin_id === mentorId
+        );
+        
+        console.log('🔔 [MENTOR DASHBOARD] Filtered notifications for mentor:', notifMentor);
+        
         notifMentor.forEach(n => {
           if (!shownNotifIds.includes(n.id)) {
-            toast.info(n.pesan);
+            console.log('🔔 [MENTOR DASHBOARD] Showing new notification:', n);
+            toast.info(n.pesan || n.message || 'Notifikasi baru');
             setShownNotifIds(prev => [...prev, n.id]);
           }
         });
@@ -371,6 +517,18 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
         console.log('✅ [MENTOR DASHBOARD] Initial data fetched successfully');
       } catch (error) {
         console.error('❌ [MENTOR DASHBOARD] Error fetching initial data:', error);
+        console.error('❌ [MENTOR DASHBOARD] Error details:', {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          config: {
+            url: error.config?.url,
+            method: error.config?.method,
+            headers: error.config?.headers
+          }
+        });
+        
         if (error.response?.status === 401) {
           console.warn('⚠️ [MENTOR DASHBOARD] Unauthorized, redirecting to login...');
           localStorage.removeItem('token');
@@ -380,7 +538,7 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
     };
 
     fetchInitialData();
-  }, [mentorId, shownNotifIds]);
+  }, [mentorId, user, shownNotifIds]);
 
   // Notification polling (separate from initial load)
   useEffect(() => {
@@ -389,15 +547,18 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
     const fetchNotif = async () => {
       try {
         const res = await api.get(`/notifikasi`);
-        const notifMentor = res.data.filter(n => n.user_id === mentorId);
+        const notifMentor = res.data.filter(n => 
+          n.user_id === mentorId || n.mentor_id === mentorId || n.admin_id === mentorId
+        );
         notifMentor.forEach(n => {
           if (!shownNotifIds.includes(n.id)) {
-            toast.info(n.pesan);
+            toast.info(n.pesan || n.message || 'Notifikasi baru');
             setShownNotifIds(prev => [...prev, n.id]);
           }
         });
       } catch (err) {
-        // silent
+        // silent - mentors may not have notifications in current schema
+        console.log('📝 [NOTIFICATION POLLING] No notifications for mentor (expected)');
       }
     };
     // Start polling after initial load
@@ -408,12 +569,24 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
   const handleOpenHistoryModal = (jadwal) => {
     setSelectedJadwal(jadwal);
     setIsHistoryModalOpen(true);
+    
+    // Fetch silabus data when modal opens
+    api.get('/silabus')
+      .then(res => {
+        setSilabus(res.data);
+        console.log('📚 Silabus data loaded:', res.data);
+      })
+      .catch(err => {
+        console.error('❌ Error fetching silabus:', err);
+        setSilabus([]);
+      });
   };
 
   const handleCloseHistoryModal = () => {
     setSelectedJadwal(null);
     setHasilBelajar('');
     setMateriDiajarkan('');
+    setSelectedSilabus('');
     setIsHistoryModalOpen(false);
   };
 
@@ -422,8 +595,15 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
       toast.error('Hasil belajar dan materi diajarkan wajib diisi.');
       return;
     }
+    
+    if (!selectedSilabus) {
+      toast.error('Silabus wajib dipilih.');
+      return;
+    }
+    
     api.post('/history-materi', {
       jadwal_sesi_id: selectedJadwal.id,
+      silabus_id: selectedSilabus,
       hasil_belajar: hasilBelajar,
       materi_diajarkan: materiDiajarkan,
     })
@@ -441,30 +621,44 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
     });
   };
 
-  const handleOpenChat = async () => {
-    try {
-      // Mentors initiate conversation with an admin.
-      // The backend will find or create a conversation with the first available admin.
-      const response = await api.post('/chat/conversations/findOrCreate');
-      // The Chat component now handles conversation loading internally,
-      // so we just need to open the modal.
-      setShowChat(true);
-    } catch (error) {
-      console.error('Error opening chat:', error);
-      toast.error('Gagal membuka chat. Silakan coba lagi.');
-    }
-  };
 
   const fetchLearningReports = () => {
     if (!mentorId) return;
     setLoadingLearningReports(true);
-    api.get(`/history-materi/mentor/${mentorId}`)
+    
+    const endpoint = `/history-materi/mentor/${mentorId}`;
+    console.log('📊 [LEARNING REPORTS] Fetching from endpoint:', endpoint);
+    console.log('📊 [LEARNING REPORTS] Mentor ID:', mentorId);
+    console.log('📊 [LEARNING REPORTS] Token:', localStorage.getItem('token'));
+    console.log('📊 [LEARNING REPORTS] User info:', localStorage.getItem('user'));
+    
+    // Test endpoint dulu
+    console.log('🧪 [TEST] Testing endpoint first...');
+    api.get(`/test-mentor/${mentorId}`)
+      .then(testRes => {
+        console.log('🧪 [TEST] Test endpoint success:', testRes.data);
+      })
+      .catch(testErr => {
+        console.error('🧪 [TEST] Test endpoint failed:', testErr);
+      });
+    
+    api.get(endpoint)
       .then(res => {
+        console.log('📊 [LEARNING REPORTS] Fetched:', res.data);
         setLearningReports(res.data);
         setLoadingLearningReports(false);
       })
-      .catch(() => {
+      .catch(err => {
+        console.error('❌ [LEARNING REPORTS] Error fetching reports', err);
+        console.error('❌ [LEARNING REPORTS] Error details:', {
+          message: err.message,
+          status: err.response?.status,
+          statusText: err.response?.statusText,
+          data: err.response?.data,
+          url: err.config?.url
+        });
         toast.error('Gagal memuat laporan pembelajaran.');
+        setLearningReports([]);
         setLoadingLearningReports(false);
       });
   };
@@ -540,6 +734,19 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
     }
   }, [activeTab, mentorId]);
 
+  // Debug logging for render
+  console.log('🎨 [MENTOR DASHBOARD] Render debug:', {
+    user,
+    mentorId,
+    mentorData,
+    jadwal: jadwal.length,
+    stats,
+    mentorMataPelajaran: mentorMataPelajaran.length,
+    allMataPelajaran: allMataPelajaran.length,
+    activeTab,
+    showProfile
+  });
+
   if (showProfile) {
     return <MentorProfile user={user} onBack={() => setShowProfile(false)} onProfileUpdate={onProfileUpdate} />;
   }
@@ -599,20 +806,6 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
           </div>
         </div>
         
-        {/* Floating Chat Button */}
-        <div className="fixed bottom-8 right-8 z-50">
-          <button
-            onClick={handleOpenChat}
-            className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition"
-          >
-            <ChatBubbleOvalLeftEllipsisIcon className="h-8 w-8" />
-          </button>
-        </div>
-
-        {/* Chat Modal */}
-        {showChat && (
-          <Chat isOpen={showChat} onClose={() => setShowChat(false)} />
-        )}
 
         {/* Tab Content */}
         {activeTab === 'jadwal' && (
@@ -625,7 +818,13 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
                   </svg>
                 </div>
                 <div>
-                  <h1 className="text-3xl md:text-4xl font-bold text-gray-800">Selamat Datang, {user.nama}!</h1>
+                  <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
+                    Selamat Datang, {mentorData?.nama || user?.nama || user?.name || 'Mentor'}!
+                  </h1>
+                  {/* Debug info */}
+                  <div className="text-xs text-gray-400 mt-1">
+                    Debug: mentorData={mentorData?.nama || 'null'}, user={user?.nama || user?.name || 'null'}
+                  </div>
                   <p className="text-gray-600 mt-1">Kelola jadwal mengajar dan ketersediaan Anda dengan mudah</p>
                 </div>
               </div>
@@ -633,22 +832,18 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-white p-4 rounded-xl shadow-sm border border-blue-100">
               <p className="text-sm text-gray-500">Total Kelas</p>
-              <p className="text-2xl font-bold text-indigo-600">{jadwal.length}</p>
+              <p className="text-2xl font-bold text-indigo-600">{stats.totalKelas}</p>
+              <div className="text-xs text-gray-400">Debug: {jadwal.length} jadwal</div>
             </div>
             <div className="bg-white p-4 rounded-xl shadow-sm border border-green-100">
               <p className="text-sm text-gray-500">Selesai</p>
-              <p className="text-2xl font-bold text-green-600">{jadwal.filter(j => j.status === 'completed').length}</p>
+              <p className="text-2xl font-bold text-green-600">{stats.selesai}</p>
+              <div className="text-xs text-gray-400">Debug: {jadwal.filter(j => j.status === 'completed').length} completed</div>
             </div>
             <div className="bg-white p-4 rounded-xl shadow-sm border border-yellow-100">
               <p className="text-sm text-gray-500">Minggu Ini</p>
-              <p className="text-2xl font-bold text-yellow-600">{jadwal.filter(j => {
-                const classDate = new Date(j.tanggal);
-                const today = new Date();
-                const weekStart = new Date(today.setDate(today.getDate() - today.getDay()));
-                const weekEnd = new Date(weekStart);
-                weekEnd.setDate(weekStart.getDate() + 6);
-                return classDate >= weekStart && classDate <= weekEnd;
-              }).length}</p>
+              <p className="text-2xl font-bold text-yellow-600">{stats.mingguIni}</p>
+              <div className="text-xs text-gray-400">Debug: {stats.mingguIni} this week</div>
             </div>
           </div>
         </div>
@@ -690,6 +885,9 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
                 </svg>
                 <h3 className="mt-2 text-lg font-medium text-gray-900">Belum ada jadwal</h3>
                 <p className="mt-1 text-sm text-gray-500">Anda belum memiliki jadwal mengajar yang dijadwalkan.</p>
+                <div className="mt-2 text-xs text-gray-400">
+                  Debug: mentorId={mentorId}, jadwal.length={jadwal.length}, loadingJadwal={loadingJadwal.toString()}
+                </div>
                 <div className="mt-6">
                   <Button variant="primary">
                     <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -721,11 +919,11 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="flex-shrink-0 h-10 w-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                              <span className="text-indigo-600 font-medium">{j.nama_kelas.charAt(0)}</span>
+                              <span className="text-indigo-600 font-medium">{j.nama_kelas ? j.nama_kelas.charAt(0) : 'K'}</span>
                             </div>
                             <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{j.nama_kelas}</div>
-                              <div className="text-sm text-gray-500">{j.mata_pelajaran}</div>
+                              <div className="text-sm font-medium text-gray-900">{j.nama_kelas || 'Kelas Tidak Diketahui'}</div>
+                              <div className="text-sm text-gray-500">{j.mata_pelajaran || 'Mata Pelajaran Tidak Diketahui'}</div>
                             </div>
                           </div>
                         </td>
@@ -803,6 +1001,9 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
                     </svg>
                     <h3 className="mt-2 text-lg font-medium text-gray-900">Belum ada laporan pembelajaran</h3>
                     <p className="mt-1 text-sm text-gray-500">Anda belum membuat laporan pembelajaran untuk sesi yang telah selesai.</p>
+                    <div className="mt-2 text-xs text-gray-400">
+                      Debug: mentorId={mentorId}, learningReports.length={learningReports.length}, loadingLearningReports={loadingLearningReports.toString()}
+                    </div>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -824,13 +1025,13 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
                               <div className="text-sm font-medium text-gray-900">{report.tanggal}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">{report.nama_kelas}</div>
+                              <div className="text-sm font-medium text-gray-900">{report.nama_kelas || 'Kelas Tidak Diketahui'}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{report.nama_mapel}</div>
+                              <div className="text-sm text-gray-900">{report.nama_mapel || 'Mata Pelajaran Tidak Diketahui'}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">Sesi {report.sesi}</div>
+                              <div className="text-sm text-gray-900">Sesi {report.sesi || 'N/A'}</div>
                             </td>
                             <td className="px-6 py-4">
                               <div className="text-sm text-gray-900 line-clamp-2">{report.materi_diajarkan}</div>
@@ -856,6 +1057,9 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
                 <div>
                   <h2 className="text-2xl font-bold text-gray-800">Ketersediaan Mengajar</h2>
                   <p className="text-sm text-gray-500 mt-1">Atur waktu yang tersedia untuk mengajar minggu ini</p>
+                  <div className="text-xs text-gray-400 mt-1">
+                    Debug: mentorId={mentorId}, mingguKe={mingguKe}
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2 mt-4 md:mt-0">
                   <Button 
@@ -999,6 +1203,9 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
                     </svg>
                     <h3 className="mt-2 text-lg font-medium text-gray-900">Belum ada mata pelajaran</h3>
                     <p className="mt-1 text-sm text-gray-500">Tambahkan mata pelajaran yang dapat Anda ajarkan.</p>
+                    <div className="mt-2 text-xs text-gray-400">
+                      Debug: mentorId={mentorId}, mentorMataPelajaran.length={mentorMataPelajaran.length}, allMataPelajaran.length={allMataPelajaran.length}
+                    </div>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1046,6 +1253,26 @@ export default function MentorDashboard({ user, onLogout, onProfileUpdate }) {
                 </p>
               </div>
               <div className="p-4">
+                <div className="mb-4">
+                  <label htmlFor="selectedSilabus" className="block text-sm font-medium text-gray-700 mb-1">Silabus yang Digunakan *</label>
+                  <select
+                    id="selectedSilabus"
+                    value={selectedSilabus}
+                    onChange={(e) => setSelectedSilabus(e.target.value)}
+                    className="w-full border rounded p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    required
+                  >
+                    <option value="">Pilih silabus...</option>
+                    {silabus.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.nama}
+                      </option>
+                    ))}
+                  </select>
+                  {silabus.length === 0 && (
+                    <p className="text-xs text-gray-500 mt-1">Tidak ada silabus tersedia. Hubungi admin untuk menambahkan silabus.</p>
+                  )}
+                </div>
                 <div className="mb-4">
                   <label htmlFor="materiDiajarkan" className="block text-sm font-medium text-gray-700 mb-1">Materi Diajarkan</label>
                   <textarea

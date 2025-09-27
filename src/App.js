@@ -13,8 +13,28 @@ function App() {
   const [user, setUser] = useState(() => {
     try {
       const savedUser = localStorage.getItem('user');
+      const savedToken = localStorage.getItem('token');
       const parsedUser = savedUser ? JSON.parse(savedUser) : null;
-      console.log('🔍 [APP] User state initialized:', parsedUser);
+      
+      console.log('🔍 [APP] User state initialized:');
+      console.log('  - Saved user:', parsedUser);
+      console.log('  - Saved token:', savedToken);
+      
+      // Verify token and user consistency
+      if (parsedUser && savedToken) {
+        const tokenRole = savedToken.split('_')[0];
+        const userRole = parsedUser.role;
+        console.log('  - Token role:', tokenRole);
+        console.log('  - User role:', userRole);
+        console.log('  - Role match:', tokenRole === userRole);
+        
+        if (tokenRole !== userRole) {
+          console.warn('⚠️ [APP] Token and user role mismatch, clearing data');
+          localStorage.clear();
+          return null;
+        }
+      }
+      
       return parsedUser;
     } catch (error) {
       console.error('Error parsing user from localStorage:', error);
@@ -24,13 +44,23 @@ function App() {
 
   const handleLogin = (userData) => {
     console.log('🔍 [APP] handleLogin called with:', userData);
+    console.log('🔍 [APP] User ID:', userData.id);
+    console.log('🔍 [APP] User role:', userData.role);
+    
+    // Verify token consistency
+    const token = localStorage.getItem('token');
+    console.log('🔍 [APP] Current token:', token);
+    console.log('🔍 [APP] Token role:', token ? token.split('_')[0] : 'none');
+    console.log('🔍 [APP] User role:', userData.role);
+    console.log('🔍 [APP] Role match:', token ? token.split('_')[0] === userData.role : false);
+    
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
     console.log('🔍 [APP] User state updated to:', userData);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
+    localStorage.clear(); // Clear all data including token
     setUser(null);
   };
 

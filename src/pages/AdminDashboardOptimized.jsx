@@ -170,7 +170,7 @@ const AdminDashboardOptimized = () => {
           />
         );
       case 'ketersediaan-mentor':
-        return <KetersediaanMentorTab mentors={mentors} />;
+        return <KetersediaanMentorTab />;
       case 'users':
         return <UsersTab users={users} />;
       case 'pengumuman':
