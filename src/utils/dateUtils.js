@@ -2,16 +2,12 @@
 
 // Hitung minggu ke berapa dari tanggal - KONSISTEN DENGAN BACKEND
 export function getWeekNumber(date) {
-  const dateObj = new Date(date.getTime());
-  dateObj.setHours(0, 0, 0, 0);
-
-  const startOfYear = new Date(dateObj.getFullYear(), 0, 1);
-  const days = Math.floor((dateObj - startOfYear) / (24 * 60 * 60 * 1000));
-  
-  // Logika ini HARUS SAMA PERSIS dengan yang di backend
-  const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
-
-  return weekNumber;
+  // Gunakan perhitungan ISO yang sama dengan backend
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
 // Hitung minggu ke berapa dari tanggal (menggunakan standar ISO - minggu dimulai dari Senin)
